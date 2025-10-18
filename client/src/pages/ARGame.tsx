@@ -299,46 +299,52 @@ export default function ARGame() {
     claimRewardsMutation.mutate(voucher);
   };
 
-  const handleShare = async () => {
+  const [showShareMenu, setShowShareMenu] = useState(false);
+
+  const getShareText = () => {
     const tier = getRewardTier();
     const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
-    const shareText = `I just scored ${score} points${tier ? ` and earned ${tierEmoji} ${tier.toUpperCase()} tier` : ''} playing ${event?.name || 'AR Game'} on Spectacle! Can you beat my score?`;
-    const shareUrl = window.location.href;
+    return `I just scored ${score} points${tier ? ` and earned ${tierEmoji} ${tier.toUpperCase()} tier` : ''} playing ${event?.name || 'AR Game'} on Spectacle! Can you beat my score?`;
+  };
 
-    // Try native Web Share API (works on mobile)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Spectacle AR Game - ${score} points!`,
-          text: shareText,
-          url: shareUrl,
-        });
-        toast({
-          title: "Shared successfully!",
-          description: "Thanks for spreading the word!",
-        });
-      } catch (error: any) {
-        // User cancelled share or error occurred
-        if (error.name !== 'AbortError') {
-          console.error('Share error:', error);
-        }
-      }
-    } else {
-      // Fallback: Copy to clipboard
-      try {
-        const textToCopy = `${shareText}\n${shareUrl}`;
-        navigator.clipboard.writeText(textToCopy);
-        toast({
-          title: "Copied to clipboard!",
-          description: "Share link copied. Paste it anywhere to share!",
-        });
-      } catch (error) {
-        toast({
-          title: "Share not supported",
-          description: "Try copying the URL manually to share.",
-          variant: "destructive",
-        });
-      }
+  const handleShare = () => {
+    setShowShareMenu(!showShareMenu);
+  };
+
+  const shareToTwitter = () => {
+    const text = getShareText();
+    const url = window.location.href;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(twitterUrl, '_blank');
+  };
+
+  const shareToFacebook = () => {
+    const url = window.location.href;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(getShareText())}`;
+    window.open(facebookUrl, '_blank');
+  };
+
+  const shareToLinkedIn = () => {
+    const url = window.location.href;
+    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+    window.open(linkedInUrl, '_blank');
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      const textToCopy = `${getShareText()}\n${window.location.href}`;
+      await navigator.clipboard.writeText(textToCopy);
+      toast({
+        title: "Copied to clipboard!",
+        description: "Share text and link copied. Paste anywhere!",
+      });
+      setShowShareMenu(false);
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -601,16 +607,62 @@ export default function ARGame() {
                 )}
 
                 {/* Social Share */}
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleShare}
-                  className="w-full border-white/40 text-white hover:bg-white/10"
-                  data-testid="button-share"
-                >
-                  <Share2 className="w-5 h-5 mr-2" />
-                  Share Your Score
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={handleShare}
+                    className="w-full border-white/40 text-white hover:bg-white/10"
+                    data-testid="button-share"
+                  >
+                    <Share2 className="w-5 h-5 mr-2" />
+                    Share Your Score
+                  </Button>
+                  
+                  {showShareMenu && (
+                    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 space-y-2 border border-white/20">
+                      <p className="text-white/80 text-sm text-center mb-3">Share to:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={shareToTwitter}
+                          className="border-white/40 text-white hover:bg-white/10"
+                          data-testid="button-share-twitter"
+                        >
+                          𝕏 Twitter
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={shareToFacebook}
+                          className="border-white/40 text-white hover:bg-white/10"
+                          data-testid="button-share-facebook"
+                        >
+                          Facebook
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={shareToLinkedIn}
+                          className="border-white/40 text-white hover:bg-white/10"
+                          data-testid="button-share-linkedin"
+                        >
+                          LinkedIn
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={copyToClipboard}
+                          className="border-white/40 text-white hover:bg-white/10"
+                          data-testid="button-share-copy"
+                        >
+                          Copy Link
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Play Again */}
                 <Button
