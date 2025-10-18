@@ -36,14 +36,29 @@ export const bookings = pgTable("bookings", {
   propId: text("prop_id").notNull(),
   eventId: text("event_id"),
   organizerWallet: text("organizer_wallet").notNull(),
+  vendorWallet: text("vendor_wallet"), // Vendor's Algorand address
   startDate: text("start_date").notNull(), // ISO date string
   endDate: text("end_date").notNull(),
   rentalFee: decimal("rental_fee", { precision: 10, scale: 2 }).notNull(),
   depositAmount: decimal("deposit_amount", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().default('pending'), // 'pending', 'confirmed', 'active', 'returned', 'completed'
-  escrowTxId: text("escrow_tx_id"), // Mock blockchain transaction ID
+  
+  // Smart contract fields (Algorand)
+  contractAppId: text("contract_app_id"), // Algorand app ID of escrow contract
+  contractAddress: text("contract_address"), // Escrow contract's Algorand address
+  deploymentTxId: text("deployment_tx_id"), // Contract deployment transaction ID
+  depositTxId: text("deposit_tx_id"), // Deposit payment transaction ID
+  deliveryTxId: text("delivery_tx_id"), // Delivery confirmation transaction ID
+  returnTxId: text("return_tx_id"), // Return confirmation transaction ID
+  refundTxId: text("refund_tx_id"), // Deposit refund transaction ID
+  
+  // Legacy field (for backward compatibility)
+  escrowTxId: text("escrow_tx_id"), // Legacy/mock blockchain transaction ID
+  
+  // Photo verification
   deliveryPhotos: jsonb("delivery_photos").$type<{ url: string; hash: string; timestamp: string }[]>(),
   returnPhotos: jsonb("return_photos").$type<{ url: string; hash: string; timestamp: string }[]>(),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
