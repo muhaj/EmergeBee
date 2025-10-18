@@ -9,6 +9,7 @@ import Home from "@/pages/Home";
 import Marketplace from "@/pages/Marketplace";
 import PropDetail from "@/pages/PropDetail";
 import OrganizerDashboard from "@/pages/OrganizerDashboard";
+import VendorDashboard from "@/pages/VendorDashboard";
 import ARGame from "@/pages/ARGame";
 import NotFound from "@/pages/not-found";
 
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/prop/:id" component={PropDetail} />
       <Route path="/dashboard" component={OrganizerDashboard} />
+      <Route path="/vendor" component={VendorDashboard} />
       <Route path="/ar/:id" component={ARGame} />
       <Route path="/ar-game/:id" component={ARGame} />
       <Route component={NotFound} />

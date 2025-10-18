@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Package, LayoutDashboard, Home, Wallet, Sparkles } from "lucide-react";
+import { Package, LayoutDashboard, Home, Wallet, Sparkles, Store } from "lucide-react";
 import { useWallet } from "@/lib/WalletContext";
 
 export default function Navigation() {
@@ -34,7 +34,10 @@ export default function Navigation() {
               Marketplace
             </NavLink>
             <NavLink href="/dashboard" active={location === "/dashboard"} icon={<LayoutDashboard className="w-4 h-4" />}>
-              Dashboard
+              Organizer
+            </NavLink>
+            <NavLink href="/vendor" active={location === "/vendor"} icon={<Store className="w-4 h-4" />}>
+              Vendor
             </NavLink>
           </nav>
 
