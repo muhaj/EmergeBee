@@ -64,14 +64,8 @@ def create_opt_in_transaction(receiver_address, asa_id):
             index=int(asa_id)
         )
         
-        # Encode as msgpack and then base64
-        unsigned_txn_msgpack = encoding.msgpack_encode(txn)
-        # If msgpack_encode returns a string, convert to bytes
-        if isinstance(unsigned_txn_msgpack, str):
-            unsigned_txn_bytes = unsigned_txn_msgpack.encode('latin-1')
-        else:
-            unsigned_txn_bytes = unsigned_txn_msgpack
-        unsigned_txn_b64 = base64.b64encode(unsigned_txn_bytes).decode('utf-8')
+        # encoding.msgpack_encode already returns base64 string
+        unsigned_txn_b64 = encoding.msgpack_encode(txn)
         
         return {
             'success': True,
