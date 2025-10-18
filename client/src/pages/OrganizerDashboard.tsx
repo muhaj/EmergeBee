@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth, SignInButton } from "@clerk/clerk-react";
+import { useAuth } from "@/hooks/useAuth";
 import { useWallet } from "@/lib/WalletContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -27,7 +27,7 @@ import type { Event, Booking } from "@shared/schema";
 export default function OrganizerDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isSignedIn } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { isConnected, connectWallet } = useWallet();
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -35,7 +35,7 @@ export default function OrganizerDashboard() {
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
 
   // Show sign-in prompt if not authenticated
-  if (!isSignedIn && !isConnected) {
+  if (!authLoading && !isAuthenticated && !isConnected) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <Card className="w-full max-w-md">
@@ -46,15 +46,14 @@ export default function OrganizerDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <SignInButton mode="modal">
-              <Button 
-                size="lg"
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                data-testid="button-sign-in-clerk"
-              >
-                Sign In with Clerk
-              </Button>
-            </SignInButton>
+            <Button 
+              onClick={() => window.location.href = "/api/login"}
+              size="lg"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              data-testid="button-sign-in"
+            >
+              Sign In
+            </Button>
             <div className="text-center text-sm text-muted-foreground">or</div>
             <Button 
               onClick={connectWallet}

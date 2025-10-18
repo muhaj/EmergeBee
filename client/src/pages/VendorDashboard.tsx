@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@/hooks/useAuth";
 import { useWallet } from "@/lib/WalletContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import type { Vendor, Payout } from "@shared/schema";
 
 export default function VendorDashboard() {
   const { walletAddress, connectWallet, isConnected } = useWallet();
-  const { isSignedIn } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [paymentMethod, setPaymentMethod] = useState<string>("pending");
   const [blockchainWallet, setBlockchainWallet] = useState("");
