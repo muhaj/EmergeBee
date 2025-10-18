@@ -1,7 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Package, LayoutDashboard, Home, Store, Wallet } from "lucide-react";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
+import { Package, LayoutDashboard, Home, Wallet } from "lucide-react";
 import { useWallet } from "@/lib/WalletContext";
 
 export default function Navigation() {
@@ -34,19 +33,13 @@ export default function Navigation() {
             <NavLink href="/marketplace" active={location === "/marketplace"} icon={<Package className="w-4 h-4" />}>
               Marketplace
             </NavLink>
-            <SignedIn>
-              <NavLink href="/dashboard" active={location === "/dashboard"} icon={<LayoutDashboard className="w-4 h-4" />}>
-                Organizer
-              </NavLink>
-              <NavLink href="/vendor" active={location === "/vendor"} icon={<Store className="w-4 h-4" />}>
-                Vendor
-              </NavLink>
-            </SignedIn>
+            <NavLink href="/dashboard" active={location === "/dashboard"} icon={<LayoutDashboard className="w-4 h-4" />}>
+              Dashboard
+            </NavLink>
           </nav>
 
-          {/* Authentication & Wallet */}
+          {/* Wallet Connection */}
           <div className="flex items-center gap-3">
-            {/* Pera Wallet Connection */}
             {!isConnected ? (
               <Button 
                 onClick={connectWallet} 
@@ -67,29 +60,6 @@ export default function Navigation() {
                 {accountAddress?.slice(0, 6)}...{accountAddress?.slice(-4)}
               </Button>
             )}
-
-            {/* Clerk Authentication */}
-            <SignedOut>
-              <SignInButton mode="modal">
-                <Button 
-                  variant="default"
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                  data-testid="button-sign-in"
-                >
-                  Sign In
-                </Button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton 
-                afterSignOutUrl="/"
-                appearance={{
-                  elements: {
-                    avatarBox: "w-9 h-9"
-                  }
-                }}
-              />
-            </SignedIn>
           </div>
         </div>
       </div>
