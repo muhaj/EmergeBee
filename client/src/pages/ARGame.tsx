@@ -242,12 +242,12 @@ export default function ARGame() {
       const txId = response.txId || response.txid || "";
 
       toast({
-        title: "Opt-in successful!",
-        description: "Transferring reward to your wallet...",
+        title: "Opt-in transaction submitted!",
+        description: "Waiting for blockchain confirmation...",
       });
 
-      // Wait a moment for confirmation, then complete claim
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for blockchain confirmation (Algorand TestNet: ~4-5 seconds)
+      await new Promise(resolve => setTimeout(resolve, 6000));
       
       const completeResponse = await apiRequest("POST", "/api/rewards/complete-claim", {
         sessionId: claimData.sessionId,

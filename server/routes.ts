@@ -592,13 +592,18 @@ export function registerRoutes(app: Express): Server {
       });
 
       const result = JSON.parse(scriptOutput);
+      
+      console.log("Complete claim Python result:", result);
 
       if (!result.success) {
         return res.status(500).json({ error: result.error || "Failed to transfer ASA" });
       }
 
       if (result.needs_optin) {
-        return res.status(400).json({ error: "ASA opt-in verification failed" });
+        return res.status(400).json({ 
+          error: "ASA opt-in not confirmed yet. Please wait a few more seconds and try again.",
+          needsRetry: true 
+        });
       }
 
       // Mark voucher as claimed
