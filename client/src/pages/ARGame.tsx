@@ -455,9 +455,24 @@ export default function ARGame() {
       {/* Enhanced A-Frame AR Scene */}
       {gameState === 'playing' && (
         <div className="absolute inset-0" ref={sceneRef} style={{ touchAction: 'none' }}>
+          <style>{`
+            /* Hide AR.js camera video element */
+            video {
+              display: none !important;
+            }
+            /* Ensure A-Frame canvas is visible and full screen */
+            .a-canvas {
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100% !important;
+              height: 100% !important;
+              z-index: 1 !important;
+            }
+          `}</style>
           <a-scene
             embedded
-            arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: true;"
+            arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;"
             vr-mode-ui="enabled: false"
             renderer="logarithmicDepthBuffer: true; antialias: true;"
             style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
