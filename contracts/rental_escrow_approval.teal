@@ -1,0 +1,321 @@
+#pragma version 10
+txn ApplicationID
+int 0
+==
+bnz main_l18
+txna ApplicationArgs 0
+byte "deposit"
+==
+bnz main_l17
+txna ApplicationArgs 0
+byte "delivery"
+==
+bnz main_l16
+txna ApplicationArgs 0
+byte "return"
+==
+bnz main_l15
+txna ApplicationArgs 0
+byte "damage"
+==
+bnz main_l14
+txna ApplicationArgs 0
+byte "release_fee"
+==
+bnz main_l13
+txna ApplicationArgs 0
+byte "refund"
+==
+bnz main_l12
+txna ApplicationArgs 0
+byte "claim"
+==
+bnz main_l11
+txna ApplicationArgs 0
+byte "timeout"
+==
+bnz main_l10
+err
+main_l10:
+txn Sender
+byte "vendor"
+app_global_get
+==
+assert
+global LatestTimestamp
+byte "lease_end"
+app_global_get
+int 2592000
++
+>=
+assert
+global GroupSize
+int 2
+==
+assert
+gtxn 1 TypeEnum
+int pay
+==
+assert
+gtxn 1 Sender
+global CurrentApplicationAddress
+==
+assert
+gtxn 1 Receiver
+byte "vendor"
+app_global_get
+==
+assert
+gtxn 1 CloseRemainderTo
+byte "vendor"
+app_global_get
+==
+assert
+int 1
+return
+main_l11:
+byte "damage_reported"
+app_global_get
+int 1
+==
+assert
+global GroupSize
+int 2
+==
+assert
+gtxn 1 TypeEnum
+int pay
+==
+assert
+gtxn 1 Sender
+global CurrentApplicationAddress
+==
+assert
+gtxn 1 Receiver
+byte "vendor"
+app_global_get
+==
+assert
+gtxn 1 Amount
+byte "deposit_amount"
+app_global_get
+==
+assert
+int 1
+return
+main_l12:
+byte "prop_returned"
+app_global_get
+int 1
+==
+assert
+byte "damage_reported"
+app_global_get
+int 0
+==
+assert
+byte "dispute_active"
+app_global_get
+int 0
+==
+assert
+global GroupSize
+int 2
+==
+assert
+gtxn 1 TypeEnum
+int pay
+==
+assert
+gtxn 1 Sender
+global CurrentApplicationAddress
+==
+assert
+gtxn 1 Receiver
+byte "organizer"
+app_global_get
+==
+assert
+gtxn 1 Amount
+byte "deposit_amount"
+app_global_get
+==
+assert
+int 1
+return
+main_l13:
+byte "prop_delivered"
+app_global_get
+int 1
+==
+assert
+global GroupSize
+int 2
+==
+assert
+gtxn 1 TypeEnum
+int pay
+==
+assert
+gtxn 1 Sender
+global CurrentApplicationAddress
+==
+assert
+gtxn 1 Receiver
+byte "vendor"
+app_global_get
+==
+assert
+gtxn 1 Amount
+byte "rental_fee"
+app_global_get
+==
+assert
+int 1
+return
+main_l14:
+txn Sender
+byte "vendor"
+app_global_get
+==
+assert
+byte "prop_returned"
+app_global_get
+int 1
+==
+assert
+byte "damage_reported"
+int 1
+app_global_put
+byte "dispute_active"
+int 1
+app_global_put
+int 1
+return
+main_l15:
+txn Sender
+byte "organizer"
+app_global_get
+==
+assert
+byte "prop_delivered"
+app_global_get
+int 1
+==
+assert
+byte "prop_returned"
+app_global_get
+int 0
+==
+assert
+byte "prop_returned"
+int 1
+app_global_put
+int 1
+return
+main_l16:
+txn Sender
+byte "vendor"
+app_global_get
+==
+assert
+byte "deposit_paid"
+app_global_get
+int 1
+==
+assert
+byte "prop_delivered"
+app_global_get
+int 0
+==
+assert
+byte "prop_delivered"
+int 1
+app_global_put
+int 1
+return
+main_l17:
+txn Sender
+byte "organizer"
+app_global_get
+==
+assert
+byte "deposit_paid"
+app_global_get
+int 0
+==
+assert
+global GroupSize
+int 2
+==
+assert
+gtxn 1 TypeEnum
+int pay
+==
+assert
+gtxn 1 Sender
+byte "organizer"
+app_global_get
+==
+assert
+gtxn 1 Receiver
+global CurrentApplicationAddress
+==
+assert
+gtxn 1 Amount
+byte "deposit_amount"
+app_global_get
+byte "rental_fee"
+app_global_get
++
+>=
+assert
+byte "deposit_paid"
+int 1
+app_global_put
+int 1
+return
+main_l18:
+txn NumAppArgs
+int 6
+==
+assert
+byte "organizer"
+txna ApplicationArgs 0
+app_global_put
+byte "vendor"
+txna ApplicationArgs 1
+app_global_put
+byte "deposit_amount"
+txna ApplicationArgs 2
+btoi
+app_global_put
+byte "rental_fee"
+txna ApplicationArgs 3
+btoi
+app_global_put
+byte "lease_start"
+txna ApplicationArgs 4
+btoi
+app_global_put
+byte "lease_end"
+txna ApplicationArgs 5
+btoi
+app_global_put
+byte "deposit_paid"
+int 0
+app_global_put
+byte "prop_delivered"
+int 0
+app_global_put
+byte "prop_returned"
+int 0
+app_global_put
+byte "damage_reported"
+int 0
+app_global_put
+byte "dispute_active"
+int 0
+app_global_put
+int 1
+return
