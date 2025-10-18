@@ -42,7 +42,8 @@ export default function ARGame() {
       playerWallet?: string;
       rewardTier?: string;
     }) => {
-      return await apiRequest("POST", "/api/game-sessions", data);
+      const response = await apiRequest("POST", "/api/game-sessions", data);
+      return await response.json();
     },
     onSuccess: (data: any) => {
       console.log("Game session response:", data);
