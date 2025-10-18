@@ -384,6 +384,7 @@ export function registerRoutes(app: Express): Server {
   // Prepare reward claim - generates unsigned Algorand transaction
   app.post("/api/rewards/prepare-claim", async (req, res) => {
     try {
+      console.log("Received reward claim request body:", JSON.stringify(req.body, null, 2));
       const { voucherData, signature, voucherHash } = req.body as SignedVoucher;
 
       // Recreate hash
@@ -482,10 +483,13 @@ export function registerRoutes(app: Express): Server {
 
       await new Promise<void>((resolve, reject) => {
         pythonProcess.on("close", (code) => {
+          console.log(`Python process exited with code ${code}`);
+          console.log("Python stdout:", scriptOutput);
+          console.log("Python stderr:", scriptError);
           if (code === 0) {
             resolve();
           } else {
-            reject(new Error(`Python script failed: ${scriptError}`));
+            reject(new Error(`Python script failed: ${scriptError || 'No error message'}`));
           }
         });
       });
