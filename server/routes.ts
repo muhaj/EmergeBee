@@ -387,6 +387,14 @@ export function registerRoutes(app: Express): Server {
       console.log("Received reward claim request body:", JSON.stringify(req.body, null, 2));
       const { voucherData, signature, voucherHash } = req.body as SignedVoucher;
 
+      // Validate wallet address
+      if (!voucherData.wallet || voucherData.wallet === "UNCLAIMED") {
+        return res.status(400).json({ 
+          error: "Please connect your wallet before claiming rewards",
+          needsWallet: true 
+        });
+      }
+
       // Recreate hash
       const voucherJson = JSON.stringify(voucherData);
       const computedHash = createHash("sha256").update(voucherJson).digest("hex");

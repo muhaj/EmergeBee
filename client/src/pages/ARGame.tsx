@@ -174,11 +174,22 @@ export default function ARGame() {
       }
     },
     onError: (error: any) => {
-      toast({
-        title: "Claim failed",
-        description: error.message || "Failed to claim reward",
-        variant: "destructive",
-      });
+      console.error("Claim mutation error:", error);
+      
+      // Check if it's a wallet connection issue
+      if (error.message?.includes("connect your wallet")) {
+        toast({
+          title: "Wallet Required",
+          description: "Please connect your wallet before claiming rewards.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Claim failed",
+          description: error.message || "Failed to claim reward",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -421,6 +432,24 @@ export default function ARGame() {
                     </div>
                   </div>
                 </div>
+
+                {!isConnected && (
+                  <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4 text-center">
+                    <p className="text-yellow-200 text-sm font-semibold mb-2">⚠️ Connect Wallet First!</p>
+                    <p className="text-yellow-100/80 text-xs">
+                      Connect your Pera Wallet before playing to claim blockchain rewards after the game.
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={handleConnectWallet}
+                      className="mt-3 bg-white text-purple-600 hover:bg-white/90"
+                      data-testid="button-connect-start-wallet"
+                    >
+                      <Wallet className="w-4 h-4 mr-2" />
+                      Connect Now
+                    </Button>
+                  </div>
+                )}
 
                 <Button
                   size="lg"
