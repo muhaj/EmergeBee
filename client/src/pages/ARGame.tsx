@@ -276,11 +276,23 @@ export default function ARGame() {
 
   const handleOptIn = async (claimData: any) => {
     try {
+      console.log("=== STARTING OPT-IN PROCESS ===");
+      console.log("Claim data received:", claimData);
+      
+      if (!claimData.unsignedTxn) {
+        throw new Error("No unsigned transaction provided");
+      }
+      
+      if (!claimData.sessionId || !claimData.asaId) {
+        throw new Error("Missing sessionId or asaId");
+      }
+
       // @ts-ignore - Pera Wallet types
       const { PeraWalletConnect } = await import("@perawallet/connect");
       const peraWallet = new PeraWalletConnect();
 
       // Reconnect to existing session
+      console.log("Reconnecting to Pera Wallet...");
       const accounts = await peraWallet.reconnectSession();
       console.log("Reconnected accounts:", accounts);
 
@@ -288,19 +300,23 @@ export default function ARGame() {
       const algosdk = await import("algosdk");
 
       // Decode base64 unsigned transaction into Transaction object
+      console.log("Decoding unsigned transaction...");
       const unsignedTxnB64 = claimData.unsignedTxn;
       const unsignedTxnBytes = Uint8Array.from(atob(unsignedTxnB64), c => c.charCodeAt(0));
       const unsignedTxn = algosdk.decodeUnsignedTransaction(unsignedTxnBytes);
-      
       console.log("Decoded transaction:", unsignedTxn);
 
       // Ask player to sign opt-in transaction (pass Transaction object, not bytes)
+      console.log("Requesting signature from Pera Wallet...");
       const signedTxns = await peraWallet.signTransaction([[{ txn: unsignedTxn, signers: [accountAddress!] }]]);
+      console.log("Transaction signed!");
       
       // Submit opt-in transaction
+      console.log("Submitting opt-in transaction to blockchain...");
       const client = new algosdk.Algodv2("", "https://testnet-api.algonode.cloud", "");
       const response = await client.sendRawTransaction(signedTxns).do();
       const txId = response.txId || response.txid || "";
+      console.log("Opt-in TX ID:", txId);
 
       toast({
         title: "Opt-in transaction submitted!",
@@ -308,7 +324,15 @@ export default function ARGame() {
       });
 
       // Wait for blockchain confirmation (Algorand TestNet: ~4-5 seconds)
+      console.log("Waiting 6 seconds for blockchain confirmation...");
       await new Promise(resolve => setTimeout(resolve, 6000));
+      
+      console.log("Calling complete-claim endpoint with:", {
+        sessionId: claimData.sessionId,
+        optInTxId: txId,
+        playerWallet: accountAddress!,
+        asaId: claimData.asaId,
+      });
       
       const completeResponse = await apiRequest("POST", "/api/rewards/complete-claim", {
         sessionId: claimData.sessionId,
@@ -318,6 +342,7 @@ export default function ARGame() {
       });
       
       const completeData = await completeResponse.json();
+      console.log("Complete-claim response:", completeData);
       
       setRewardsClaimed(true);
       
@@ -329,7 +354,10 @@ export default function ARGame() {
       return completeData;
 
     } catch (error: any) {
-      console.error("Opt-in error:", error);
+      console.error("=== OPT-IN ERROR ===");
+      console.error("Error details:", error);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
       toast({
         title: "Opt-in failed",
         description: error.message || "Please try again",
