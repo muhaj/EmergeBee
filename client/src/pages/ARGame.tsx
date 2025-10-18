@@ -223,16 +223,21 @@ export default function ARGame() {
       const accounts = await peraWallet.reconnectSession();
       console.log("Reconnected accounts:", accounts);
 
-      // Decode base64 unsigned transaction
+      // Import algosdk to decode the transaction
+      const algosdk = await import("algosdk");
+
+      // Decode base64 unsigned transaction into Transaction object
       const unsignedTxnB64 = claimData.unsignedTxn;
       const unsignedTxnBytes = Uint8Array.from(atob(unsignedTxnB64), c => c.charCodeAt(0));
+      const unsignedTxn = algosdk.decodeUnsignedTransaction(unsignedTxnBytes);
+      
+      console.log("Decoded transaction:", unsignedTxn);
 
-      // Ask player to sign opt-in transaction
-      const signedTxns = await peraWallet.signTransaction([[{ txn: unsignedTxnBytes, signers: [accountAddress!] }]]);
+      // Ask player to sign opt-in transaction (pass Transaction object, not bytes)
+      const signedTxns = await peraWallet.signTransaction([[{ txn: unsignedTxn, signers: [accountAddress!] }]]);
       
       // Submit opt-in transaction
-      const algod = await import("algosdk");
-      const client = new algod.Algodv2("", "https://testnet-api.algonode.cloud", "");
+      const client = new algosdk.Algodv2("", "https://testnet-api.algonode.cloud", "");
       const response = await client.sendRawTransaction(signedTxns).do();
       const txId = response.txId || response.txid || "";
 
