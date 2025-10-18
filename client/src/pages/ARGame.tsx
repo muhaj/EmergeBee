@@ -150,14 +150,18 @@ export default function ARGame() {
 
   const claimRewardsMutation = useMutation({
     mutationFn: async (voucherData: SignedVoucher) => {
+      console.log("Starting claim mutation with voucher:", voucherData);
       const response = await apiRequest("POST", "/api/rewards/prepare-claim", voucherData);
       const data = await response.json();
+      console.log("Received prepare-claim response:", data);
       
       // If needs opt-in, handle it immediately
       if (data.needsOptin) {
+        console.log("Needs opt-in, calling handleOptIn...");
         return await handleOptIn(data);
       }
       
+      console.log("Already opted in, returning data");
       return data;
     },
     onSuccess: (data: any) => {
