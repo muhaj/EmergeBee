@@ -116,7 +116,7 @@ export default function ARGame() {
     setTimeout(() => {
       const handleTargetClick = (evt: any) => {
         const target = evt.target;
-        if (!target.getAttribute('data-target')) return;
+        if (!target || !target.getAttribute || !target.getAttribute('data-target')) return;
         
         // Increment score
         setScore(s => s + (event?.rewards.pointsPerTarget || 10));
@@ -133,16 +133,21 @@ export default function ARGame() {
 
         // Respawn after delay
         setTimeout(() => {
+          if (!target || !target.setAttribute) return;
+          
           target.setAttribute('scale', '1 1 1');
           const originalColor = target.id === 'target-1' ? '#ff3366' : target.id === 'target-2' ? '#ff6633' : '#ff3399';
           target.setAttribute('color', originalColor);
           target.removeAttribute('animation__shrink');
           
-          // Move to random position
-          const x = (Math.random() - 0.5) * 3;
-          const y = Math.random() * 1 + 1;
-          const z = -(Math.random() * 2 + 2);
-          target.parentEl.setAttribute('position', `${x} ${y} ${z}`);
+          // Move parent entity to random position
+          const parent = target.parentElement || target.parentEl;
+          if (parent && parent.setAttribute) {
+            const x = (Math.random() - 0.5) * 3;
+            const y = Math.random() * 0.5 - 0.25;
+            const z = -(Math.random() * 2 + 2);
+            parent.setAttribute('position', `${x} ${y} ${z}`);
+          }
         }, 600);
 
         // Haptic feedback
@@ -156,7 +161,7 @@ export default function ARGame() {
       targets.forEach(target => {
         target.addEventListener('click', handleTargetClick);
       });
-    }, 1000);
+    }, 1500);
   };
 
   const handleTargetHit = () => {
