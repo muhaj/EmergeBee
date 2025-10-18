@@ -344,7 +344,7 @@ export function registerRoutes(app: Express): Server {
       const messageHash = Buffer.from(voucherHash, "hex");
       const signatureBytes = Buffer.from(signature, "hex");
       
-      const isValid = await ed25519.verify(signatureBytes, messageHash, VOUCHER_PUBLIC_KEY);
+      const isValid = await ed25519.verify(signatureBytes, messageHash, VOUCHER_PUBLIC_KEY!);
 
       if (!isValid) {
         return res.status(400).json({ valid: false, error: "Invalid signature" });
@@ -399,7 +399,7 @@ export function registerRoutes(app: Express): Server {
       const messageHash = Buffer.from(voucherHash, "hex");
       const signatureBytes = Buffer.from(signature, "hex");
       
-      const isValid = await ed25519.verify(signatureBytes, messageHash, VOUCHER_PUBLIC_KEY);
+      const isValid = await ed25519.verify(signatureBytes, messageHash, VOUCHER_PUBLIC_KEY!);
 
       if (!isValid) {
         return res.status(400).json({ error: "Invalid voucher: signature verification failed" });

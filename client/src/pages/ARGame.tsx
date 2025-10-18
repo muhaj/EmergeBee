@@ -208,9 +208,10 @@ export default function ARGame() {
       const signedTxns = await peraWallet.signTransaction([[{ txn: unsignedTxnBytes, signers: [accountAddress!] }]]);
       
       // Submit opt-in transaction
-      const algod = await import("algosdk").then(m => m.default);
+      const algod = await import("algosdk");
       const client = new algod.Algodv2("", "https://testnet-api.algonode.cloud", "");
-      const { txId } = await client.sendRawTransaction(signedTxns).do();
+      const response = await client.sendRawTransaction(signedTxns).do();
+      const txId = response.txId || response.txid || "";
 
       toast({
         title: "Opt-in successful!",
