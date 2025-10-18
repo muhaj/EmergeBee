@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar, MapPin, Package, Shield, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useWallet } from "@/lib/WalletContext";
 import type { Prop, InsertBooking } from "@shared/schema";
 
 export default function PropDetail() {
@@ -17,12 +18,12 @@ export default function PropDetail() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { accountAddress, isConnected, connectWallet } = useWallet();
 
   const propId = params.id;
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [walletAddress, setWalletAddress] = useState("SPECTACLE" + Math.random().toString(36).substring(2, 10).toUpperCase());
 
   const { data: prop, isLoading } = useQuery<Prop>({
     queryKey: ["/api/props", propId],
@@ -75,6 +76,17 @@ export default function PropDetail() {
     
     if (!prop || !startDate || !endDate) return;
 
+    // Check if wallet is connected
+    if (!isConnected || !accountAddress) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your Pera Wallet to make a booking.",
+        variant: "destructive",
+      });
+      connectWallet();
+      return;
+    }
+
     // Calculate rental fee
     const rentalFee = calculateRentalFee();
     
@@ -90,13 +102,13 @@ export default function PropDetail() {
 
     const booking: InsertBooking = {
       propId: prop.id,
-      organizerWallet: walletAddress,
+      organizerWallet: accountAddress,
       startDate: startDate, // Already in YYYY-MM-DD format from date input
       endDate: endDate,     // Already in YYYY-MM-DD format from date input
       rentalFee: rentalFee.toFixed(2),
       depositAmount: prop.depositAmount,
       status: "pending",
-      escrowTxId: `MOCK_TX_${Date.now()}`,
+      escrowTxId: `MOCK_TX_${Date.now()}`, // Will be replaced with real transaction in next task
     };
 
     bookingMutation.mutate(booking);

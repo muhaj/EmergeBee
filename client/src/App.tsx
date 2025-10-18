@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { WalletProvider } from "@/lib/WalletContext";
 import Navigation from "@/components/Navigation";
 import Home from "@/pages/Home";
 import Marketplace from "@/pages/Marketplace";
@@ -27,13 +28,15 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <div className="min-h-screen bg-background">
-          <Navigation />
-          <Router />
-        </div>
-        <Toaster />
-      </TooltipProvider>
+      <WalletProvider>
+        <TooltipProvider>
+          <div className="min-h-screen bg-background">
+            <Navigation />
+            <Router />
+          </div>
+          <Toaster />
+        </TooltipProvider>
+      </WalletProvider>
     </QueryClientProvider>
   );
 }

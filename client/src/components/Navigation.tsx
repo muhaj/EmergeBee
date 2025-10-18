@@ -1,24 +1,11 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Package, LayoutDashboard, Home, Wallet } from "lucide-react";
-import { useState } from "react";
+import { Package, LayoutDashboard, Home, Wallet, Sparkles } from "lucide-react";
+import { useWallet } from "@/lib/WalletContext";
 
 export default function Navigation() {
   const [location] = useLocation();
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState("");
-
-  const connectWallet = () => {
-    // Mock wallet connection for MVP
-    const mockAddress = "SPECTACLE" + Math.random().toString(36).substring(2, 15).toUpperCase();
-    setWalletAddress(mockAddress);
-    setWalletConnected(true);
-  };
-
-  const disconnectWallet = () => {
-    setWalletAddress("");
-    setWalletConnected(false);
-  };
+  const { accountAddress, isConnected, connectWallet, disconnectWallet } = useWallet();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg">
@@ -53,7 +40,7 @@ export default function Navigation() {
 
           {/* Wallet Connection */}
           <div className="flex items-center gap-3">
-            {!walletConnected ? (
+            {!isConnected ? (
               <Button 
                 onClick={connectWallet} 
                 variant="default"
@@ -61,7 +48,7 @@ export default function Navigation() {
                 data-testid="button-connect-wallet"
               >
                 <Wallet className="w-4 h-4 mr-2" />
-                Connect Wallet
+                Connect Pera Wallet
               </Button>
             ) : (
               <Button 
@@ -71,7 +58,7 @@ export default function Navigation() {
                 data-testid="button-disconnect-wallet"
               >
                 <Wallet className="w-4 h-4 mr-2" />
-                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                {accountAddress?.slice(0, 6)}...{accountAddress?.slice(-4)}
               </Button>
             )}
           </div>
@@ -107,6 +94,3 @@ function NavLink({
     </Link>
   );
 }
-
-// Import Sparkles from lucide-react
-import { Sparkles } from "lucide-react";
