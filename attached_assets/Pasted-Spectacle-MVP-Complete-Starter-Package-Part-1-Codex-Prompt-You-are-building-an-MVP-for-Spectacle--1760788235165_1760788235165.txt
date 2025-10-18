@@ -1,0 +1,813 @@
+Spectacle MVP - Complete Starter Package
+Part 1: Codex Prompt
+You are building an MVP for Spectacle - a trustless prop rental + AR rewards platform on Algorand TestNet.
+
+CONTEXT:
+- Monorepo with PNPM workspaces
+- Astro frontend (user already has theme) + React components
+- Node/TypeScript backend (Fastify) for voucher signing
+- PyTeal smart contracts (EventEngine + DramaMeter)
+- Uses Pera Wallet Connect, AlgoSDK, WebXR/A-Frame
+
+ARCHITECTURE:
+1. EventEngine (PyTeal): Verifies signed vouchers, mints Points ASA, distributes Coupon ASAs, tracks nonces in Boxes
+2. DramaMeter (PyTeal): ARC-19 dynamic NFT controller that updates metadata URL based on event milestones
+3. Backend Signer: Issues Ed25519-signed vouchers after AR game completion
+4. Frontend: WebAR game → score → claim transaction → social share
+
+CRITICAL REQUIREMENTS:
+- Voucher signing uses canonical byte encoding (not JSON) for on-chain verification
+- Nonce-based replay protection in contract Boxes
+- Atomic transaction groups for claim flow
+- ABI method calls with proper foreign app/asset arrays
+- Ed25519 signature verification in PyTeal
+
+START BY IMPLEMENTING:
+1. Complete PyTeal contracts with proper ABI signatures
+2. Voucher signer with byte-level encoding matching contract expectations
+3. Algorand.ts utilities for building/signing claim transactions
+4. A-Frame AR game component with score submission
+
+REFER TO THE STARTER FILES PROVIDED for exact data structures and patterns.
+
+Part 2: Starter Files
+File: contracts/event_engine/app.py
+python"""
+EventEngine - Main stateful application for Spectacle
+Verifies signed vouchers and distributes rewards via inner transactions
+"""
+from pyteal import *
+
+def approval_program():
+    # Global state keys
+    KEY_ORACLE_PK = Bytes("oracle_pk")
+    KEY_POINTS_ASA = Bytes("points_asa")
+    KEY_COUPON_BRONZE = Bytes("coupon_bronze")
+    KEY_COUPON_SILVER = Bytes("coupon_silver")
+    KEY_COUPON_GOLD = Bytes("coupon_gold")
+    KEY_SBT_PLAY = Bytes("sbt_play")
+    KEY_DRAMA_METER_APP = Bytes("drama_meter")
+    
+    # Box prefixes
+    BOX_NONCE_PREFIX = Bytes("nonce:")
+    BOX_SCORE_PREFIX = Bytes("score:")
+    
+    # Initialize application
+    @Subroutine(TealType.none)
+    def init_event(
+        oracle_pk: abi.DynamicBytes,
+        points_asa: abi.Uint64,
+        bronze_asa: abi.Uint64,
+        silver_asa: abi.Uint64,
+        gold_asa: abi.Uint64,
+        sbt_asa: abi.Uint64,
+        drama_app: abi.Uint64
+    ):
+        return Seq(
+            App.globalPut(KEY_ORACLE_PK, oracle_pk.get()),
+            App.globalPut(KEY_POINTS_ASA, points_asa.get()),
+            App.globalPut(KEY_COUPON_BRONZE, bronze_asa.get()),
+            App.globalPut(KEY_COUPON_SILVER, silver_asa.get()),
+            App.globalPut(KEY_COUPON_GOLD, gold_asa.get()),
+            App.globalPut(KEY_SBT_PLAY, sbt_asa.get()),
+            App.globalPut(KEY_DRAMA_METER_APP, drama_app.get()),
+            Approve()
+        )
+    
+    # Main claim method
+    @Subroutine(TealType.none)
+    def claim_rewards(
+        voucher_bytes: abi.DynamicBytes,
+        signature: abi.DynamicBytes,
+        wallet: abi.Address,
+        points: abi.Uint64,
+        tier: abi.Uint64,
+        nonce: abi.DynamicBytes,
+        exp_ts: abi.Uint64,
+        channel: abi.Uint64,
+        event_id: abi.Uint64
+    ):
+        # Local vars
+        nonce_box_name = ScratchVar(TealType.bytes)
+        score_box_name = ScratchVar(TealType.bytes)
+        current_score = ScratchVar(TealType.uint64)
+        voucher_hash = ScratchVar(TealType.bytes)
+        
+        return Seq(
+            # 1. Check expiration
+            Assert(Global.latest_timestamp() <= exp_ts.get()),
+            
+            # 2. Verify nonce hasn't been used
+            nonce_box_name.store(Concat(BOX_NONCE_PREFIX, nonce.get())),
+            Assert(App.box_length(nonce_box_name.load()) == Int(0)),
+            
+            # 3. Verify signature
+            voucher_hash.store(Sha256(voucher_bytes.get())),
+            Assert(
+                Ed25519Verify_Bare(
+                    voucher_hash.load(),
+                    signature.get(),
+                    App.globalGet(KEY_ORACLE_PK)
+                )
+            ),
+            
+            # 4. Mark nonce as used
+            App.box_put(nonce_box_name.load(), Bytes("base16", "01")),
+            
+            # 5. Update score
+            score_box_name.store(Concat(BOX_SCORE_PREFIX, wallet.get())),
+            current_score.store(
+                If(
+                    App.box_length(score_box_name.load()) > Int(0),
+                    Btoi(App.box_get(score_box_name.load())),
+                    Int(0)
+                )
+            ),
+            current_score.store(current_score.load() + points.get()),
+            App.box_put(score_box_name.load(), Itob(current_score.load())),
+            
+            # 6. Transfer Points ASA (inner transaction)
+            InnerTxnBuilder.Begin(),
+            InnerTxnBuilder.SetFields({
+                TxnField.type_enum: TxnType.AssetTransfer,
+                TxnField.xfer_asset: App.globalGet(KEY_POINTS_ASA),
+                TxnField.asset_amount: points.get(),
+                TxnField.asset_receiver: wallet.get(),
+                TxnField.fee: Int(0)
+            }),
+            InnerTxnBuilder.Submit(),
+            
+            # 7. Transfer Coupon if tier > 0
+            If(
+                tier.get() > Int(0),
+                Seq(
+                    InnerTxnBuilder.Begin(),
+                    InnerTxnBuilder.SetFields({
+                        TxnField.type_enum: TxnType.AssetTransfer,
+                        TxnField.xfer_asset: 
+                            If(tier.get() == Int(1), App.globalGet(KEY_COUPON_BRONZE),
+                            If(tier.get() == Int(2), App.globalGet(KEY_COUPON_SILVER),
+                            App.globalGet(KEY_COUPON_GOLD))),
+                        TxnField.asset_amount: Int(1),
+                        TxnField.asset_receiver: wallet.get(),
+                        TxnField.fee: Int(0)
+                    }),
+                    InnerTxnBuilder.Submit()
+                )
+            ),
+            
+            # 8. Write receipt hash in note
+            InnerTxnBuilder.Begin(),
+            InnerTxnBuilder.SetFields({
+                TxnField.type_enum: TxnType.Payment,
+                TxnField.receiver: Global.current_application_address(),
+                TxnField.amount: Int(0),
+                TxnField.note: Sha256(Concat(wallet.get(), Itob(points.get()), nonce.get())),
+                TxnField.fee: Int(0)
+            }),
+            InnerTxnBuilder.Submit(),
+            
+            Approve()
+        )
+    
+    # Router
+    router = Router(
+        "EventEngine",
+        BareCallActions(
+            no_op=OnCompleteAction.create_only(Approve()),
+            opt_in=OnCompleteAction.always(Approve()),
+            close_out=OnCompleteAction.always(Approve()),
+            update_application=OnCompleteAction.never(),
+            delete_application=OnCompleteAction.never()
+        )
+    )
+    
+    router.add_method_handler(init_event)
+    router.add_method_handler(claim_rewards)
+    
+    return router.compile_program(version=10)
+
+def clear_state_program():
+    return Approve()
+
+if __name__ == "__main__":
+    with open("event_engine_approval.teal", "w") as f:
+        f.write(compileTeal(approval_program(), mode=Mode.Application, version=10))
+    
+    with open("event_engine_clear.teal", "w") as f:
+        f.write(compileTeal(clear_state_program(), mode=Mode.Application, version=10))
+
+File: contracts/drama_meter/app.py
+python"""
+DramaMeter - ARC-19 Dynamic NFT Controller
+Updates metadata URL as event milestones are reached
+"""
+from pyteal import *
+
+def approval_program():
+    KEY_CONTROLLER = Bytes("controller")
+    KEY_STAGE = Bytes("stage")
+    KEY_ASSET_ID = Bytes("asset_id")
+    KEY_URI_0 = Bytes("uri_0")
+    KEY_URI_1 = Bytes("uri_1")
+    KEY_URI_2 = Bytes("uri_2")
+    KEY_URI_3 = Bytes("uri_3")
+    
+    @Subroutine(TealType.none)
+    def init_drama_meter(
+        asset_id: abi.Uint64,
+        controller: abi.Address,
+        uri_0: abi.String,
+        uri_1: abi.String,
+        uri_2: abi.String,
+        uri_3: abi.String
+    ):
+        return Seq(
+            App.globalPut(KEY_ASSET_ID, asset_id.get()),
+            App.globalPut(KEY_CONTROLLER, controller.get()),
+            App.globalPut(KEY_STAGE, Int(0)),
+            App.globalPut(KEY_URI_0, uri_0.get()),
+            App.globalPut(KEY_URI_1, uri_1.get()),
+            App.globalPut(KEY_URI_2, uri_2.get()),
+            App.globalPut(KEY_URI_3, uri_3.get()),
+            Approve()
+        )
+    
+    @Subroutine(TealType.none)
+    def update_stage(new_stage: abi.Uint64):
+        current_stage = App.globalGet(KEY_STAGE)
+        new_uri = ScratchVar(TealType.bytes)
+        
+        return Seq(
+            # Only controller can update
+            Assert(Txn.sender() == App.globalGet(KEY_CONTROLLER)),
+            
+            # Stage must be monotonic
+            Assert(new_stage.get() > current_stage),
+            Assert(new_stage.get() <= Int(3)),
+            
+            # Select URI
+            new_uri.store(
+                If(new_stage.get() == Int(1), App.globalGet(KEY_URI_1),
+                If(new_stage.get() == Int(2), App.globalGet(KEY_URI_2),
+                App.globalGet(KEY_URI_3)))
+            ),
+            
+            # Update asset config (inner transaction)
+            InnerTxnBuilder.Begin(),
+            InnerTxnBuilder.SetFields({
+                TxnField.type_enum: TxnType.AssetConfig,
+                TxnField.config_asset: App.globalGet(KEY_ASSET_ID),
+                TxnField.config_asset_url: new_uri.load(),
+                TxnField.fee: Int(0)
+            }),
+            InnerTxnBuilder.Submit(),
+            
+            App.globalPut(KEY_STAGE, new_stage.get()),
+            Approve()
+        )
+    
+    router = Router(
+        "DramaMeter",
+        BareCallActions(
+            no_op=OnCompleteAction.create_only(Approve()),
+            update_application=OnCompleteAction.never(),
+            delete_application=OnCompleteAction.never()
+        )
+    )
+    
+    router.add_method_handler(init_drama_meter)
+    router.add_method_handler(update_stage)
+    
+    return router.compile_program(version=10)
+
+def clear_state_program():
+    return Approve()
+
+if __name__ == "__main__":
+    with open("drama_meter_approval.teal", "w") as f:
+        f.write(compileTeal(approval_program(), mode=Mode.Application, version=10))
+    
+    with open("drama_meter_clear.teal", "w") as f:
+        f.write(compileTeal(clear_state_program(), mode=Mode.Application, version=10))
+
+File: apps/api-signer/src/lib/signer.ts
+typescript/**
+ * Voucher Signer - Creates Ed25519 signatures for reward claims
+ * Uses canonical byte encoding to match PyTeal verification
+ */
+import nacl from 'tweetnacl';
+import { Buffer } from 'buffer';
+import algosdk from 'algosdk';
+
+export interface VoucherData {
+  v: 1;
+  app_id: number;
+  event_id: number;
+  network: 'testnet' | 'mainnet';
+  channel: 0 | 1; // 0=play, 1=metrics
+  wallet: string; // base32 address
+  points: number;
+  tier: 0 | 1 | 2 | 3; // none/bronze/silver/gold
+  nonce_b64: string; // base64 of 32 bytes
+  exp: number; // unix timestamp
+}
+
+export interface SignedVoucher {
+  voucher_b64: string;
+  sig_b64: string;
+  voucher_data: VoucherData;
+}
+
+/**
+ * Compose canonical byte encoding for voucher
+ * Must match PyTeal verification logic exactly
+ */
+function encodeVoucherBytes(voucher: VoucherData): Uint8Array {
+  const networkBytes = Buffer.from(voucher.network, 'utf-8');
+  const walletBytes = algosdk.decodeAddress(voucher.wallet).publicKey;
+  const nonceBytes = Buffer.from(voucher.nonce_b64, 'base64');
+  
+  // Build: app_id(8) + event_id(8) + channel(8) + exp(8) + network + wallet(32) + points(8) + tier(8) + nonce(32)
+  const buffer = Buffer.alloc(8 + 8 + 8 + 8 + networkBytes.length + 32 + 8 + 8 + 32);
+  let offset = 0;
+  
+  // Write uint64s as big-endian
+  buffer.writeBigUInt64BE(BigInt(voucher.app_id), offset); offset += 8;
+  buffer.writeBigUInt64BE(BigInt(voucher.event_id), offset); offset += 8;
+  buffer.writeBigUInt64BE(BigInt(voucher.channel), offset); offset += 8;
+  buffer.writeBigUInt64BE(BigInt(voucher.exp), offset); offset += 8;
+  
+  // Network string
+  networkBytes.copy(buffer, offset); offset += networkBytes.length;
+  
+  // Wallet address (32 bytes)
+  walletBytes.copy(buffer, offset); offset += 32;
+  
+  // Points and tier
+  buffer.writeBigUInt64BE(BigInt(voucher.points), offset); offset += 8;
+  buffer.writeBigUInt64BE(BigInt(voucher.tier), offset); offset += 8;
+  
+  // Nonce
+  nonceBytes.copy(buffer, offset);
+  
+  return new Uint8Array(buffer);
+}
+
+/**
+ * Sign a voucher using Ed25519
+ */
+export function signVoucher(
+  voucher: VoucherData,
+  secretKey: Uint8Array
+): SignedVoucher {
+  const voucherBytes = encodeVoucherBytes(voucher);
+  const messageHash = nacl.hash(voucherBytes).slice(0, 32); // SHA-512 -> first 32 bytes
+  const signature = nacl.sign.detached(messageHash, secretKey);
+  
+  return {
+    voucher_b64: Buffer.from(voucherBytes).toString('base64'),
+    sig_b64: Buffer.from(signature).toString('base64'),
+    voucher_data: voucher
+  };
+}
+
+/**
+ * Generate a secure random nonce (32 bytes)
+ */
+export function generateNonce(): string {
+  return Buffer.from(nacl.randomBytes(32)).toString('base64');
+}
+
+/**
+ * Create signer instance from base64 secret key
+ */
+export class VoucherSigner {
+  private secretKey: Uint8Array;
+  public publicKey: Uint8Array;
+  
+  constructor(secretKeyB64: string) {
+    this.secretKey = Buffer.from(secretKeyB64, 'base64');
+    this.publicKey = this.secretKey.slice(32); // Ed25519: last 32 bytes
+  }
+  
+  sign(voucher: VoucherData): SignedVoucher {
+    return signVoucher(voucher, this.secretKey);
+  }
+  
+  getPublicKeyBase64(): string {
+    return Buffer.from(this.publicKey).toString('base64');
+  }
+}
+
+/**
+ * Generate new Ed25519 keypair for testing
+ */
+export function generateKeypair() {
+  const keypair = nacl.sign.keyPair();
+  return {
+    publicKey: Buffer.from(keypair.publicKey).toString('base64'),
+    secretKey: Buffer.from(keypair.secretKey).toString('base64')
+  };
+}
+
+File: apps/web-astro/src/lib/algorand.ts
+typescript/**
+ * Algorand utilities for Spectacle
+ * Handles wallet connection, transaction building, and contract calls
+ */
+import algosdk from 'algosdk';
+import { PeraWalletConnect } from '@perawallet/connect';
+
+export interface AlgoConfig {
+  algodUrl: string;
+  algodToken: string;
+  network: 'testnet' | 'mainnet';
+  eventEngineAppId: number;
+  dramaMeterAppId: number;
+  pointsAsaId: number;
+  couponBronzeId: number;
+  couponSilverId: number;
+  couponGoldId: number;
+}
+
+export class AlgorandClient {
+  private algodClient: algosdk.Algodv2;
+  private peraWallet: PeraWalletConnect;
+  private config: AlgoConfig;
+  
+  constructor(config: AlgoConfig) {
+    this.config = config;
+    this.algodClient = new algosdk.Algodv2(
+      config.algodToken,
+      config.algodUrl,
+      ''
+    );
+    this.peraWallet = new PeraWalletConnect({
+      chainId: config.network === 'testnet' ? 416002 : 416001
+    });
+  }
+  
+  async connectWallet(): Promise<string[]> {
+    const accounts = await this.peraWallet.connect();
+    return accounts;
+  }
+  
+  disconnectWallet() {
+    this.peraWallet.disconnect();
+  }
+  
+  /**
+   * Check if account has opted into an ASA
+   */
+  async hasOptedIntoAsset(address: string, assetId: number): Promise<boolean> {
+    try {
+      const accountInfo = await this.algodClient.accountInformation(address).do();
+      return accountInfo.assets.some((a: any) => a['asset-id'] === assetId);
+    } catch {
+      return false;
+    }
+  }
+  
+  /**
+   * Build opt-in transaction for an ASA
+   */
+  async buildAssetOptIn(address: string, assetId: number): Promise<algosdk.Transaction> {
+    const params = await this.algodClient.getTransactionParams().do();
+    
+    return algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+      from: address,
+      to: address,
+      amount: 0,
+      assetIndex: assetId,
+      suggestedParams: params
+    });
+  }
+  
+  /**
+   * Build claim transaction group
+   * This is the main flow: optIn (if needed) + app call
+   */
+  async buildClaimTransaction(
+    wallet: string,
+    voucherB64: string,
+    sigB64: string,
+    points: number,
+    tier: number,
+    nonceB64: string,
+    expTs: number,
+    channel: number,
+    eventId: number
+  ): Promise<algosdk.Transaction[]> {
+    const params = await this.algodClient.getTransactionParams().do();
+    const txns: algosdk.Transaction[] = [];
+    
+    // Check if opted into Points ASA
+    const hasOptedIn = await this.hasOptedIntoAsset(wallet, this.config.pointsAsaId);
+    
+    if (!hasOptedIn) {
+      const optInTxn = await this.buildAssetOptIn(wallet, this.config.pointsAsaId);
+      txns.push(optInTxn);
+    }
+    
+    // Build ABI method call
+    const appArgs = [
+      algosdk.encodeUint64(eventId),
+      Buffer.from(voucherB64, 'base64'),
+      Buffer.from(sigB64, 'base64'),
+      algosdk.decodeAddress(wallet).publicKey,
+      algosdk.encodeUint64(points),
+      algosdk.encodeUint64(tier),
+      Buffer.from(nonceB64, 'base64'),
+      algosdk.encodeUint64(expTs),
+      algosdk.encodeUint64(channel)
+    ];
+    
+    // Foreign assets: Points + all coupons
+    const foreignAssets = [
+      this.config.pointsAsaId,
+      this.config.couponBronzeId,
+      this.config.couponSilverId,
+      this.config.couponGoldId
+    ];
+    
+    // Foreign apps: DramaMeter
+    const foreignApps = [this.config.dramaMeterAppId];
+    
+    const appCallTxn = algosdk.makeApplicationNoOpTxnFromObject({
+      from: wallet,
+      appIndex: this.config.eventEngineAppId,
+      appArgs,
+      foreignAssets,
+      foreignApps,
+      suggestedParams: params,
+      boxes: [
+        {
+          appIndex: this.config.eventEngineAppId,
+          name: new Uint8Array(Buffer.concat([
+            Buffer.from('nonce:'),
+            Buffer.from(nonceB64, 'base64')
+          ]))
+        },
+        {
+          appIndex: this.config.eventEngineAppId,
+          name: new Uint8Array(Buffer.concat([
+            Buffer.from('score:'),
+            algosdk.decodeAddress(wallet).publicKey
+          ]))
+        }
+      ]
+    });
+    
+    txns.push(appCallTxn);
+    
+    // Group transactions if multiple
+    if (txns.length > 1) {
+      algosdk.assignGroupID(txns);
+    }
+    
+    return txns;
+  }
+  
+  /**
+   * Sign and submit transaction group via Pera Wallet
+   */
+  async signAndSubmit(txns: algosdk.Transaction[]): Promise<string> {
+    const txnsToSign = txns.map(txn => ({
+      txn: txn,
+      signers: []
+    }));
+    
+    const signedTxns = await this.peraWallet.signTransaction([txnsToSign]);
+    const { txId } = await this.algodClient.sendRawTransaction(signedTxns).do();
+    
+    // Wait for confirmation
+    await algosdk.waitForConfirmation(this.algodClient, txId, 4);
+    
+    return txId;
+  }
+  
+  /**
+   * Full claim flow: build + sign + submit
+   */
+  async claim(
+    wallet: string,
+    voucherB64: string,
+    sigB64: string,
+    points: number,
+    tier: number,
+    nonceB64: string,
+    expTs: number,
+    channel: number,
+    eventId: number
+  ): Promise<string> {
+    const txns = await this.buildClaimTransaction(
+      wallet,
+      voucherB64,
+      sigB64,
+      points,
+      tier,
+      nonceB64,
+      expTs,
+      channel,
+      eventId
+    );
+    
+    return await this.signAndSubmit(txns);
+  }
+}
+
+File: apps/web-astro/src/components/ARGame.tsx
+tsx/**
+ * ARGame Component - WebXR mini-game using A-Frame
+ * Tap targets appear, player taps them, score is calculated
+ */
+import { useState, useEffect, useRef } from 'react';
+import 'aframe';
+
+interface ARGameProps {
+  eventId: number;
+  onComplete: (score: number) => void;
+  onError: (error: Error) => void;
+}
+
+export default function ARGame({ eventId, onComplete, onError }: ARGameProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [gameStarted, setGameStarted] = useState(false);
+  const sceneRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    // Check for WebXR support
+    if (!navigator.xr) {
+      onError(new Error('WebXR not supported on this device'));
+      return;
+    }
+    
+    setIsLoaded(true);
+  }, []);
+  
+  useEffect(() => {
+    if (!gameStarted) return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleGameEnd();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [gameStarted]);
+  
+  const handleGameEnd = () => {
+    const finalScore = calculateFinalScore(score, timeLeft);
+    onComplete(finalScore);
+  };
+  
+  const calculateFinalScore = (hits: number, timeRemaining: number): number => {
+    // Simple scoring: 10 points per hit + time bonus
+    return (hits * 10) + (timeRemaining * 2);
+  };
+  
+  const handleTargetHit = () => {
+    setScore(prev => prev + 1);
+    spawnNewTarget();
+  };
+  
+  const spawnNewTarget = () => {
+    // Spawn target at random position in front of camera
+    const x = (Math.random() - 0.5) * 4;
+    const y = Math.random() * 2 + 0.5;
+    const z = -(Math.random() * 2 + 2);
+    
+    const scene = document.querySelector('a-scene');
+    const target = document.createElement('a-sphere');
+    target.setAttribute('position', `${x} ${y} ${z}`);
+    target.setAttribute('radius', '0.2');
+    target.setAttribute('color', '#FF6B6B');
+    target.setAttribute('class', 'target');
+    
+    target.addEventListener('click', () => {
+      handleTargetHit();
+      target.remove();
+    });
+    
+    scene?.appendChild(target);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      if (target.parentNode) {
+        target.remove();
+      }
+    }, 3000);
+  };
+  
+  const startGame = () => {
+    setGameStarted(true);
+    // Spawn initial targets
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => spawnNewTarget(), i * 500);
+    }
+  };
+  
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Initializing AR Experience...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="relative w-full h-screen" ref={sceneRef}>
+      {/* A-Frame Scene */}
+      <a-scene
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false;"
+        vr-mode-ui="enabled: false"
+      >
+        <a-camera position="0 1.6 0" look-controls wasd-controls-enabled="false">
+          <a-cursor
+            fuse="true"
+            fuse-timeout="500"
+            color="#FF6B6B"
+            raycaster="objects: .target"
+          ></a-cursor>
+        </a-camera>
+        
+        {/* Environment */}
+        <a-sky color="#87CEEB"></a-sky>
+        <a-plane
+          position="0 0 -4"
+          rotation="-90 0 0"
+          width="10"
+          height="10"
+          color="#7BC8A4"
+        ></a-plane>
+      </a-scene>
+      
+      {/* HUD Overlay */}
+      <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/50 to-transparent">
+        <div className="flex justify-between items-center text-white">
+          <div className="text-2xl font-bold">
+            Score: {score}
+          </div>
+          <div className="text-2xl font-bold">
+            Time: {timeLeft}s
+          </div>
+        </div>
+      </div>
+      
+      {/* Start Button */}
+      {!gameStarted && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+          <button
+            onClick={startGame}
+            className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xl font-bold rounded-lg shadow-lg hover:scale-105 transition-transform"
+          >
+            Start Game
+          </button>
+        </div>
+      )}
+      
+      {/* Instructions */}
+      {gameStarted && (
+        <div className="absolute bottom-4 left-0 right-0 text-center text-white">
+          <p className="text-sm bg-black/50 inline-block px-4 py-2 rounded">
+            Tap the red spheres!
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+Part 3: Next Steps
+With Claude Code:
+bash# In your project directory
+claude code "Build Spectacle MVP using the specs in spectacle_mvp_spec.md"
+With Codex:
+
+Copy the Codex prompt above
+Save these starter files to your project
+Run Codex and paste the prompt
+Reference these files as your "source of truth"
+
+Immediate TODOs:
+
+Generate Ed25519 keypair for oracle: node -e "console.log(require('./apps/api-signer/src/lib/signer').generateKeypair())"
+Create .env files from .env.example
+Deploy contracts: pnpm deploy:contracts
+Fund test accounts from TestNet dispenser
+Test the full flow: AR game → score → voucher → claim
+
+Let me know which approach you prefer and I can continue building!

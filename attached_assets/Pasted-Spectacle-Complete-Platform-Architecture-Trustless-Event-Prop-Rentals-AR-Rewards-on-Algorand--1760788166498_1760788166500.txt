@@ -1,0 +1,1218 @@
+Spectacle - Complete Platform Architecture
+Trustless Event Prop Rentals + AR Rewards on Algorand
+
+🎯 Executive Summary
+Spectacle is a Web3 platform combining trustless prop rentals with AR gamification. Event organizers rent props (giant llamas, inflatables, branded setups) with blockchain-secured deposits, run AR mini-games for attendees, and distribute on-chain rewards (NFTs, discounts, points). AI automates asset creation, quality checks, and dispute resolution.
+Core Value Propositions:
+
+For Vendors: Guaranteed payment + damage insurance via smart contracts
+For Organizers: Instant prop rentals + gamified brand engagement
+For Attendees: AR experiences with real, tradeable rewards
+
+
+🏗️ System Architecture Overview
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND LAYER                            │
+├─────────────┬─────────────────┬──────────────────┬──────────────┤
+│ Landing Page│  Marketplace    │ Organizer Portal │ AR Experience│
+│ (Public)    │  (Browse/Rent)  │ (Dashboard)      │ (Mobile Web) │
+└─────────────┴─────────────────┴──────────────────┴──────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      APPLICATION LAYER                           │
+├──────────────────┬──────────────────┬──────────────────────────┤
+│   Auth Service   │  Rental Service  │    AR Game Service       │
+│  (Pera/Magic)    │  (Booking Logic) │  (8th Wall + Scoring)    │
+├──────────────────┼──────────────────┼──────────────────────────┤
+│ Photo Verify     │  AI Processing   │   Reward Distribution    │
+│ (Before/After)   │  (Image→3D, QA)  │   (Voucher Signer)       │
+└──────────────────┴──────────────────┴──────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         DATA LAYER                               │
+├──────────────────────────────┬──────────────────────────────────┤
+│      PostgreSQL              │        IPFS/S3                   │
+│  (Users, Bookings, Events)   │  (Photos, 3D Models, Media)      │
+└──────────────────────────────┴──────────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    BLOCKCHAIN LAYER (Algorand)                   │
+├──────────────┬─────────────────┬─────────────────┬──────────────┤
+│Rental Escrow │  Event Engine   │  Drama Meter    │ ASA Tokens   │
+│(Deposits)    │  (Claim Verify) │  (Dynamic NFT)  │ (Rewards)    │
+└──────────────┴─────────────────┴─────────────────┴──────────────┘
+
+👥 User Personas & Flows
+1. Prop Vendor (Owner of Props)
+Goals: List props, earn rental income, protect assets from damage
+Journey:
+
+Sign Up → Connect Pera Wallet + KYC verification (optional)
+List Props → Upload photos, set pricing, availability, deposit amount
+AI Enhancement → System auto-generates 3D models from photos (optional)
+Receive Booking → Accept/decline rental request
+Delivery Scan → Take photos of prop condition → AI quality check → hash stored on-chain
+Event Happens → Prop is used
+Return Scan → Take photos after return → AI compares before/after
+Resolution:
+
+✅ No damage → Escrow releases deposit to organizer, rental fee to vendor
+⚠️ Damage detected → AI estimates repair cost → Dispute flow triggered
+
+
+
+
+2. Event Organizer (Brand/Agency)
+Goals: Rent props, run AR experiences, engage attendees, distribute rewards
+Journey:
+A. Rental Process:
+
+Sign Up → Connect wallet (Pera/Magic Link for custodial)
+Browse Marketplace → Filter props by type, location, price, availability
+Book Props → Select dates, pay rental fee + deposit (USDCa) via smart contract
+Delivery → Vendor delivers → Organizer confirms receipt via photo scan
+Use Props → Event happens
+Return → Take return photos → AI validates condition → Deposit refund or deduction
+
+B. AR Experience Creation:
+
+Create Event in dashboard
+Choose AR Mode:
+
+Simple: Upload logo/image → AI converts to 3D object (Nano Banana API)
+Template: Select pre-built game (tap targets, ring toss, scavenger hunt)
+Custom: Upload own 3D models (.glb format)
+
+
+Configure Rewards:
+
+Bronze/Silver/Gold tier coupons (ASAs)
+Points tokens (tradeable ASA)
+Exclusive NFTs (ARC-19 Drama Meter)
+
+
+Generate QR Codes → One per zone/entrance
+Print & Place → QR codes at event venue
+Monitor Live → Real-time leaderboard, engagement metrics
+
+C. Post-Event:
+
+Review Analytics → Player count, avg score, shares, wallet opt-ins
+Export Data → Attendee wallets for future airdrops/marketing
+Settle Rental → Finalize deposit return/deduction
+
+
+3. Attendee (Event Participant)
+Goals: Play AR games, earn rewards, share on social, redeem perks
+Journey:
+
+Scan QR Code → Opens AR experience in mobile browser
+Camera Permission → Grant access (required for AR)
+Play Game → Tap targets, ring toss, pose challenges (15-30 seconds)
+Score Submission → Backend validates score, issues signed voucher
+Connect Wallet:
+
+Has Wallet: Connect Pera Wallet
+No Wallet: Magic Link creates custodial wallet (email/SMS)
+
+
+Claim On-Chain:
+
+Submit voucher to EventEngine smart contract
+Receive Points ASA + Coupon ASA (if earned)
+
+
+Share:
+
+Capture photo/video of AR moment
+AI adds branded overlay (logo, score, "I scored 95!")
+Share to Twitter/Instagram → Get bonus points via second claim
+
+
+Redeem Rewards:
+
+Coupons: Burn ASA at checkout (Shopify app verifies burn)
+Points: Accumulate for leaderboard, trade, or future perks
+NFTs: Hold Drama Meter NFT for exclusive access
+
+
+
+
+📐 Smart Contract Architecture
+1. RentalEscrow.algo (Stateful Application)
+Purpose: Holds rental deposits in USDCa, releases based on condition verification
+Global State:
+
+vendor: address - Prop owner
+organizer: address - Event organizer
+deposit_amount: uint64 - USDCa amount held
+rental_fee: uint64 - Payment to vendor
+prop_id: uint64 - Reference to off-chain prop listing
+delivery_hash: bytes32 - SHA-256 of delivery photos
+return_hash: bytes32 - SHA-256 of return photos
+status: uint8 - 0=pending, 1=active, 2=returned_ok, 3=disputed, 4=resolved
+oracle_pk: bytes - AI damage detection oracle public key
+
+Methods:
+python# Called by organizer after booking
+def open_rental(prop_id, vendor, deposit, rental_fee):
+    # Transfer deposit + rental_fee from organizer to contract
+    # Set status = pending
+    
+# Called by vendor after delivery
+def mark_delivery(photo_hash, oracle_sig):
+    # Verify oracle signed photo_hash (AI validated quality)
+    # Store delivery_hash
+    # Set status = active
+    
+# Called by organizer after return
+def mark_return(photo_hash, oracle_sig):
+    # Verify oracle signed photo_hash
+    # Store return_hash
+    # Set status = returned_ok (if AI says no damage)
+    # Trigger settlement
+    
+def settle():
+    # If status == returned_ok:
+    #   Transfer deposit back to organizer
+    #   Transfer rental_fee to vendor
+    # If status == resolved (after dispute):
+    #   Transfer deposit_amount * damage_pct to vendor
+    #   Transfer remainder to organizer
+    
+def dispute():
+    # Called by either party if disagreement
+    # Set status = disputed
+    # Lock funds, require off-chain arbitration signature
+    
+def resolve_dispute(damage_pct, arbitrator_sig):
+    # Verify arbitrator signature
+    # Split deposit based on damage_pct (0-100)
+    # Transfer rental_fee to vendor
+    # Set status = resolved
+AI Oracle Integration:
+
+Off-chain service (Python + PyTorch) compares delivery vs return photos
+Outputs: damage_detected: bool, damage_severity: 0-100, confidence: float
+Signs result with oracle private key
+Contract verifies signature before accepting result
+
+
+2. EventEngine.algo (Stateful Application)
+Already defined in earlier spec - handles voucher verification and reward distribution
+Key Methods:
+
+init_event() - Setup oracle PK, ASA IDs, Drama Meter app
+claim(voucher, sig) - Verify voucher, mint points, issue coupons
+claim_metrics(voucher, sig) - Bonus points for social shares
+update_leaderboard() - Track top scorers in Box storage
+
+
+3. DramaMeter.algo (ARC-19 Dynamic NFT Controller)
+Already defined - updates NFT metadata URL based on event milestones
+Evolution:
+
+Stage 0: Bronze (0-100 players)
+Stage 1: Silver (100-500 players)
+Stage 2: Gold (500-1000 players)
+Stage 3: Neon/Legendary (1000+ players)
+
+
+4. CouponToken.asa (ASA Standard Token)
+Purpose: Burnable discount tokens (Bronze/Silver/Gold tiers)
+Properties:
+
+total: 10,000 per tier
+decimals: 0 (indivisible)
+clawback: EventEngine (allows burn-to-redeem)
+freeze: EventEngine (prevents transfers until redemption)
+
+Redemption Flow:
+
+Attendee goes to checkout with coupon ASA in wallet
+Shopify app detects wallet connection
+App calls EventEngine.burn_coupon(coupon_id, wallet)
+Smart contract clawbacks (burns) the ASA
+App issues discount code
+Order completes with discount applied
+
+
+🗄️ Database Schema (PostgreSQL)
+sql-- USERS & AUTH
+CREATE TABLE users (
+  id UUID PRIMARY KEY,
+  wallet_address VARCHAR(58) UNIQUE, -- Algorand address
+  email VARCHAR(255),
+  phone VARCHAR(20),
+  user_type VARCHAR(20), -- 'vendor', 'organizer', 'attendee'
+  kyc_status VARCHAR(20), -- 'pending', 'approved', 'rejected'
+  kyc_provider VARCHAR(50), -- 'persona', 'onfido', etc.
+  magic_link_id VARCHAR(255), -- if using Magic for custodial wallets
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- PROP LISTINGS
+CREATE TABLE props (
+  id UUID PRIMARY KEY,
+  vendor_id UUID REFERENCES users(id),
+  name VARCHAR(255),
+  description TEXT,
+  category VARCHAR(50), -- 'inflatable', 'sculpture', 'booth', etc.
+  daily_rate DECIMAL(10,2), -- in USD
+  deposit_amount DECIMAL(10,2), -- damage deposit
+  currency VARCHAR(10) DEFAULT 'USDCa',
+  location_lat DECIMAL(10,8),
+  location_lng DECIMAL(11,8),
+  location_address TEXT,
+  dimensions JSONB, -- {height, width, depth, weight}
+  photos JSONB, -- [{url, hash, is_primary}]
+  model_3d_url TEXT, -- AI-generated or uploaded .glb
+  model_3d_hash VARCHAR(64), -- IPFS hash
+  status VARCHAR(20), -- 'active', 'rented', 'maintenance', 'inactive'
+  availability_calendar JSONB, -- {blocked_dates: [...]}
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- BOOKINGS & RENTALS
+CREATE TABLE bookings (
+  id UUID PRIMARY KEY,
+  prop_id UUID REFERENCES props(id),
+  vendor_id UUID REFERENCES users(id),
+  organizer_id UUID REFERENCES users(id),
+  event_id UUID REFERENCES events(id),
+  start_date DATE,
+  end_date DATE,
+  rental_fee DECIMAL(10,2),
+  deposit_amount DECIMAL(10,2),
+  escrow_contract_id BIGINT, -- Algorand App ID
+  escrow_txid VARCHAR(52), -- Initial deposit transaction
+  status VARCHAR(30), -- 'pending', 'confirmed', 'active', 'returned', 'disputed', 'resolved'
+  
+  -- Photo verification
+  delivery_photos JSONB, -- [{url, hash, timestamp}]
+  delivery_ai_check JSONB, -- {quality_score, issues: [...]}
+  return_photos JSONB,
+  return_ai_check JSONB, -- {damage_detected, severity, confidence}
+  
+  -- Settlement
+  settlement_txid VARCHAR(52),
+  damage_pct INTEGER, -- 0-100, percentage of deposit withheld
+  dispute_reason TEXT,
+  dispute_resolution TEXT,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- EVENTS
+CREATE TABLE events (
+  id UUID PRIMARY KEY,
+  organizer_id UUID REFERENCES users(id),
+  name VARCHAR(255),
+  description TEXT,
+  location TEXT,
+  start_datetime TIMESTAMPTZ,
+  end_datetime TIMESTAMPTZ,
+  event_type VARCHAR(50), -- 'conference', 'festival', 'brand_activation', etc.
+  
+  -- Blockchain
+  event_engine_app_id BIGINT,
+  drama_meter_app_id BIGINT,
+  points_asa_id BIGINT,
+  coupon_bronze_asa_id BIGINT,
+  coupon_silver_asa_id BIGINT,
+  coupon_gold_asa_id BIGINT,
+  
+  -- AR Config
+  ar_game_type VARCHAR(50), -- 'tap_targets', 'ring_toss', 'scavenger_hunt'
+  ar_3d_models JSONB, -- [{url, name, type: 'ai_generated'|'template'|'custom'}]
+  ar_difficulty VARCHAR(20), -- 'easy', 'medium', 'hard'
+  ar_duration_seconds INTEGER DEFAULT 30,
+  
+  -- Reward Thresholds
+  reward_config JSONB, -- {bronze_threshold: 50, silver: 75, gold: 95}
+  
+  -- QR Codes
+  zones JSONB, -- [{name: 'A1', qr_url, qr_image_url}]
+  
+  -- Analytics
+  total_players INTEGER DEFAULT 0,
+  total_scores INTEGER DEFAULT 0,
+  avg_score DECIMAL(5,2),
+  total_claims INTEGER DEFAULT 0,
+  
+  status VARCHAR(20), -- 'draft', 'published', 'active', 'ended'
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- AR GAMEPLAY SESSIONS
+CREATE TABLE game_sessions (
+  id UUID PRIMARY KEY,
+  event_id UUID REFERENCES events(id),
+  player_wallet VARCHAR(58),
+  player_email VARCHAR(255), -- if Magic Link used
+  zone VARCHAR(50),
+  score INTEGER,
+  duration_seconds INTEGER,
+  device_info JSONB, -- {user_agent, platform, browser}
+  
+  -- Voucher
+  voucher_issued_at TIMESTAMPTZ,
+  voucher_b64 TEXT,
+  voucher_sig_b64 TEXT,
+  voucher_claimed BOOLEAN DEFAULT FALSE,
+  claim_txid VARCHAR(52),
+  
+  -- Media
+  screenshot_url TEXT, -- S3/IPFS URL of AR screenshot
+  video_url TEXT,
+  shared_social BOOLEAN DEFAULT FALSE,
+  share_platform VARCHAR(50), -- 'twitter', 'instagram', etc.
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- REWARDS & CLAIMS
+CREATE TABLE claims (
+  id UUID PRIMARY KEY,
+  event_id UUID REFERENCES events(id),
+  game_session_id UUID REFERENCES game_sessions(id),
+  wallet VARCHAR(58),
+  channel VARCHAR(20), -- 'play', 'metrics'
+  points_amount INTEGER,
+  coupon_tier INTEGER, -- 0=none, 1=bronze, 2=silver, 3=gold
+  nonce BYTEA,
+  voucher_hash VARCHAR(64),
+  claim_txid VARCHAR(52),
+  block_number BIGINT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- SOCIAL METRICS (for bonus claims)
+CREATE TABLE social_shares (
+  id UUID PRIMARY KEY,
+  game_session_id UUID REFERENCES game_sessions(id),
+  wallet VARCHAR(58),
+  platform VARCHAR(50),
+  post_url TEXT,
+  likes_count INTEGER DEFAULT 0,
+  comments_count INTEGER DEFAULT 0,
+  shares_count INTEGER DEFAULT 0,
+  metrics_claimed BOOLEAN DEFAULT FALSE,
+  metrics_claim_txid VARCHAR(52),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- DISPUTES
+CREATE TABLE disputes (
+  id UUID PRIMARY KEY,
+  booking_id UUID REFERENCES bookings(id),
+  initiated_by UUID REFERENCES users(id), -- vendor or organizer
+  dispute_type VARCHAR(50), -- 'damage', 'non_return', 'quality_issue'
+  description TEXT,
+  evidence JSONB, -- [{type: 'photo', url, description}]
+  
+  -- AI Analysis
+  ai_damage_report JSONB, -- {detected_issues: [...], estimated_cost, confidence}
+  
+  -- Resolution
+  status VARCHAR(30), -- 'open', 'under_review', 'resolved', 'escalated'
+  resolution TEXT,
+  resolved_by VARCHAR(50), -- 'ai_oracle', 'platform_admin', 'arbitrator'
+  damage_pct_final INTEGER, -- 0-100
+  resolution_txid VARCHAR(52),
+  
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ
+);
+
+-- INDEXES
+CREATE INDEX idx_props_vendor ON props(vendor_id);
+CREATE INDEX idx_props_status ON props(status);
+CREATE INDEX idx_bookings_organizer ON bookings(organizer_id);
+CREATE INDEX idx_bookings_event ON bookings(event_id);
+CREATE INDEX idx_events_organizer ON events(organizer_id);
+CREATE INDEX idx_game_sessions_event ON game_sessions(event_id);
+CREATE INDEX idx_game_sessions_wallet ON game_sessions(player_wallet);
+CREATE INDEX idx_claims_wallet ON claims(wallet);
+
+🤖 AI Integration Points
+1. Photo-to-3D Model Generation (Nano Banana Style)
+Use Case: Organizers upload 2D logo/image → AI converts to 3D object for AR
+Tech Stack:
+
+AI Model: TripoSR, Shap-E, or Point-E (open-source 3D generators)
+API Service: Replicate.com or custom FastAPI endpoint
+Workflow:
+
+User uploads PNG/JPG
+Backend sends to AI API
+AI generates .glb mesh (5-10 seconds)
+Backend optimizes (polygon reduction, Draco compression)
+Upload to IPFS/S3, return URL to frontend
+
+
+
+Implementation:
+python# apps/ai-service/src/image_to_3d.py
+import replicate
+import requests
+
+def generate_3d_from_image(image_url: str) -> str:
+    """Convert 2D image to 3D .glb model"""
+    output = replicate.run(
+        "stability-ai/stable-zero123",
+        input={"image": image_url}
+    )
+    
+    # Download generated .glb
+    glb_url = output['model_url']
+    glb_data = requests.get(glb_url).content
+    
+    # Optimize mesh
+    optimized_glb = optimize_model(glb_data, target_polygons=50000)
+    
+    # Upload to IPFS
+    ipfs_hash = upload_to_ipfs(optimized_glb)
+    
+    return f"ipfs://{ipfs_hash}"
+Fallback: If AI fails, use pre-built templates or manual upload
+
+2. Prop Condition AI Verification
+Use Case: Compare delivery vs return photos to detect damage
+Tech Stack:
+
+AI Model: CLIP (visual similarity) + Custom damage detection CNN
+Training Data: Synthetically damaged images + real dispute cases
+Workflow:
+
+Delivery photos → Feature extraction (CLIP embeddings)
+Return photos → Feature extraction
+Compute similarity score + specific damage detection (scratches, dents, tears)
+Output: {damage_detected: bool, severity: 0-100, affected_areas: [...], confidence: 0-1}
+
+
+
+Implementation:
+python# apps/ai-service/src/damage_detection.py
+import torch
+from transformers import CLIPProcessor, CLIPModel
+from PIL import Image
+
+class DamageDetector:
+    def __init__(self):
+        self.clip = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+        self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+        self.damage_classifier = load_custom_model("damage_cnn.pth")
+    
+    def compare_photos(self, delivery_urls: list, return_urls: list) -> dict:
+        """Compare condition before/after"""
+        
+        # Extract features
+        delivery_features = [self.get_features(url) for url in delivery_urls]
+        return_features = [self.get_features(url) for url in return_urls]
+        
+        # Compute similarity
+        similarity = cosine_similarity(delivery_features, return_features)
+        
+        # Detect specific damage types
+        damage_types = self.damage_classifier(return_urls)
+        
+        # Combine scores
+        damage_score = self.compute_damage_score(similarity, damage_types)
+        
+        return {
+            "damage_detected": damage_score > 0.3,
+            "severity": int(damage_score * 100),
+            "confidence": 0.85,
+            "issues": damage_types,
+            "recommendation": "release_deposit" if damage_score < 0.1 else "withhold_partial"
+        }
+    
+    def sign_result(self, result: dict) -> str:
+        """Sign AI verdict with oracle private key"""
+        message = hash_result(result)
+        signature = ed25519_sign(message, ORACLE_SECRET_KEY)
+        return base64.b64encode(signature).decode()
+On-Chain Verification:
+python# In RentalEscrow smart contract
+def verify_ai_oracle(result_hash: bytes, signature: bytes):
+    return Ed25519Verify(result_hash, signature, oracle_public_key)
+
+3. AR Photo/Video Enhancement (Branded Overlays)
+Use Case: After gameplay, add branded overlay with score/branding to shareable media
+Tech Stack:
+
+Image Processing: Pillow (Python) or Sharp (Node.js)
+AI Enhancement: Stable Diffusion for style transfer (optional)
+Workflow:
+
+Capture AR screenshot/video
+Add overlay: Logo + Score + "I scored 95 at BrandX!"
+Apply filters/style (e.g., "neon glow", "confetti burst")
+Generate share-optimized image (1080x1080)
+
+
+
+Implementation:
+javascript// apps/api-signer/src/services/media-processor.ts
+import sharp from 'sharp';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+
+export async function addBrandedOverlay(
+  imageBuffer: Buffer,
+  score: number,
+  eventLogo: string,
+  brandName: string
+): Promise<string> {
+  
+  // Create overlay with score and branding
+  const overlay = await sharp({
+    create: {
+      width: 1080,
+      height: 200,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0.7 }
+    }
+  })
+  .composite([
+    { input: eventLogo, gravity: 'west' },
+    { 
+      input: Buffer.from(`<svg><text x="500" y="100" font-size="60" fill="white">Score: ${score}</text></svg>`),
+      gravity: 'center'
+    }
+  ])
+  .png()
+  .toBuffer();
+  
+  // Composite onto original image
+  const result = await sharp(imageBuffer)
+    .resize(1080, 1080, { fit: 'cover' })
+    .composite([
+      { input: overlay, gravity: 'south' }
+    ])
+    .jpeg({ quality: 85 })
+    .toBuffer();
+  
+  // Upload to S3
+  const s3Key = `shares/${Date.now()}-${score}.jpg`;
+  await s3.send(new PutObjectCommand({
+    Bucket: 'spectacle-media',
+    Key: s3Key,
+    Body: result,
+    ContentType: 'image/jpeg'
+  }));
+  
+  return `https://cdn.spectacle.app/${s3Key}`;
+}
+
+4. Smart Content Moderation
+Use Case: Filter inappropriate AR screenshots before sharing
+Tech Stack:
+
+AI Model: Google Cloud Vision API or AWS Rekognition
+Checks: Explicit content, violence, hate symbols, text OCR for profanity
+Workflow:
+
+User captures AR moment
+Before allowing share, send to moderation API
+If flagged, block share + notify admin
+If clean, proceed with branded overlay
+
+
+
+Implementation:
+python# apps/ai-service/src/content_moderation.py
+from google.cloud import vision
+
+def moderate_image(image_url: str) -> dict:
+    client = vision.ImageAnnotatorClient()
+    image = vision.Image()
+    image.source.image_uri = image_url
+    
+    # Detect safe search
+    response = client.safe_search_detection(image=image)
+    safe = response.safe_search_annotation
+    
+    # Detect text for profanity
+    text_response = client.text_detection(image=image)
+    text_content = text_response.text_annotations[0].description if text_response.text_annotations else ""
+    
+    profanity_detected = check_profanity_filter(text_content)
+    
+    is_safe = (
+        safe.adult < vision.Likelihood.POSSIBLE and
+        safe.violence < vision.Likelihood.POSSIBLE and
+        not profanity_detected
+    )
+    
+    return {
+        "approved": is_safe,
+        "reasons": [] if is_safe else ["explicit_content", "profanity"],
+        "confidence": 0.92
+    }
+
+5. Adaptive AR Difficulty (Optional v2)
+Use Case: Adjust game difficulty in real-time based on player performance
+Tech Stack:
+
+AI Model: Multi-armed bandit (Thompson Sampling)
+Inputs: Player age estimate (from face), device type, past scores
+Outputs: Target spawn rate, size, speed
+
+Implementation:
+python# apps/ai-service/src/adaptive_difficulty.py
+class AdaptiveDifficulty:
+    def __init__(self):
+        self.bandit = ThompsonSampling(arms=3)  # easy, medium, hard
+    
+    def get_difficulty(self, player_context: dict) -> str:
+        """Select difficulty to maximize engagement"""
+        
+        # Context features
+        features = {
+            "estimated_age": player_context.get("age", 25),
+            "device_tier": self.classify_device(player_context["user_agent"]),
+            "session_count": player_context.get("previous_sessions", 0)
+        }
+        
+        # Select arm
+        difficulty_idx = self.bandit.select(features)
+        difficulties = ["easy", "medium", "hard"]
+        
+        return difficulties[difficulty_idx]
+    
+    def update_reward(self, difficulty: str, completion_rate: float):
+        """Update bandit based on whether player finished game"""
+        arm_idx = ["easy", "medium", "hard"].index(difficulty)
+        reward = completion_rate  # 0.0 to 1.0
+        self.bandit.update(arm_idx, reward)
+
+6. Dispute Arbitration Assistant
+Use Case: When damage disputes arise, AI suggests fair settlement
+Tech Stack:
+
+AI Model: GPT-4 or Claude for reasoning + damage detection results
+Inputs: Both parties' statements, photos, AI damage report, similar past cases
+Outputs: Recommended damage percentage (0-100%), reasoning
+
+Implementation:
+python# apps/ai-service/src/dispute_arbitrator.py
+import openai
+
+def arbitrate_dispute(dispute_data: dict) -> dict:
+    """AI-assisted dispute resolution"""
+    
+    prompt = f"""
+You are an AI arbitrator for a prop rental dispute.
+
+DELIVERY CONDITION:
+{dispute_data['delivery_ai_check']}
+
+RETURN CONDITION:
+{dispute_data['return_ai_check']}
+
+VENDOR CLAIM:
+{dispute_data['vendor_statement']}
+
+ORGANIZER DEFENSE:
+{dispute_data['organizer_statement']}
+
+DAMAGE DETECTION AI REPORT:
+- Damage detected: {dispute_data['ai_damage_report']['damage_detected']}
+- Severity: {dispute_data['ai_damage_report']['severity']}/100
+- Confidence: {dispute_data['ai_damage_report']['confidence']}
+- Issues: {dispute_data['ai_damage_report']['issues']}
+
+SIMILAR PAST CASES:
+{dispute_data['similar_cases']}
+
+Based on the evidence, recommend:
+1. Damage percentage to withhold from deposit (0-100)
+2. Reasoning
+3. Suggested next steps
+
+Be fair and balanced.
+"""
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3
+    )
+    
+    ai_recommendation = parse_ai_response(response.choices[0].message.content)
+    
+    return {
+        "recommended_damage_pct": ai_recommendation['percentage'],
+        "reasoning": ai_recommendation['reasoning'],
+        "confidence": "high" if dispute_data['ai_damage_report']['confidence'] > 0.8 else "medium",
+        "requires_human_review": ai_recommendation['percentage'] > 50  # Escalate major disputes
+    }
+
+🎨 Frontend Architecture
+1. Landing Page (/)
+Tech Stack: Astro + Tailwind CSS
+Sections:
+
+Hero: "Rent Props. Run AR Experiences. Reward On-Chain."
+How It Works (3-step visual)
+Featured Props Carousel
+Featured Events
+Testimonials
+CTA: "List Your Props" / "Plan an Event"
+
+Key Components:
+tsx// src/components/Hero.astro
+<section class="bg-gradient-to-br from-purple-900 to-pink-900 text-white py-20">
+  <h1 class="text-6xl font-bold">Spectacle</h1>
+  <p class="text-2xl">Trustless Event Prop Rentals + AR Rewards</p>
+  <div class="flex gap-4 mt-8">
+    <a href="/marketplace" class="btn-primary">Browse Props</a>
+    <a href="/create-event" class="btn-secondary">Create Event</a>
+  </div>
+</section>
+
+2. Marketplace (/marketplace)
+Features:
+
+Search & Filters: Category, location radius, price range, availability dates
+Prop Cards: Photo, name, price/day, deposit, rating, location
+Map View: Interactive map with prop locations
+Quick Book: Calendar overlay for date selection
+
+Implementation:
+tsx// src/pages/marketplace.astro
+import PropCard from '../components/PropCard';
+import MapView from '../components/MapView';
+
+const props = await fetchProps(filters);
+
+<div class="grid grid-cols-3 gap-6">
+  <aside class="col-span-1">
+    <FilterPanel filters={filters} />
+  </aside>
+  
+  <main class="col-span-2">
+    <div class="grid grid-cols-2 gap-4">
+      {props.map(prop => <PropCard prop={prop} />)}
+    </div>
+  </main>
+</div>
+
+<MapView props={props} />
+
+3. Organizer Dashboard (/dashboard)
+Tabs:
+
+Events - List of created events, create new
+Rentals - Active bookings, delivery/return scans
+AR Studio - Create/edit AR experiences
+Analytics - Player stats, engagement metrics
+Wallet - Balance, rewards distributed
+
+Key Screens:
+A. Event Creation Wizard:
+tsx// src/pages/dashboard/events/create.astro
+
+<WizardSteps steps={['Details', 'Props', 'AR Game', 'Rewards', 'QR Codes']} />
+
+{/* Step 1: Event Details */}
+<EventDetailsForm />
+
+{/* Step 2: Select Props */}
+<PropSelector onSelect={handlePropBooking} />
+
+{/* Step 3: AR Game Builder */}
+<ARGameBuilder>
+  <Tab label="Simple">
+    <ImageUploader /> {/* Upload logo -> AI generates 3D */}
+    <AIProgress message="Converting to 3D..." />
+    <Preview3D model={generatedModel} />
+  </Tab>
+  
+  <Tab label="Templates">
+    <TemplateGallery templates={['Tap Targets', 'Ring Toss', 'Scavenger Hunt']} />
+  </Tab>
+  
+  <Tab label="Custom">
+    <ModelUploader accept=".glb" />
+  </Tab>
+</ARGameBuilder>
+
+{/* Step 4: Reward Configuration */}
+<RewardConfig>
+  <ThresholdSlider label="Bronze Coupon" min={0} max={100} value={50} />
+  <ThresholdSlider label="Silver Coupon" min={0} max={100} value={75} />
+  <ThresholdSlider label="Gold Coupon" min={0} max={100} value={95} />
+  <PointsMultiplier value={1.5} />
+</RewardConfig>
+
+{/* Step 5: QR Code Generator */}
+<QRCodeGenerator eventId={eventId} zones={['A1', 'A2', 'B1']} />
+B. Photo Verification Interface:
+tsx// src/pages/dashboard/rentals/[bookingId]/verify.astro
+
+<PhotoVerificationFlow booking={booking}>
+  {booking.status === 'confirmed' && (
+    <DeliveryVerification>
+      <CameraCapture 
+        onCapture={uploadDeliveryPhotos}
+        guidance="Take 4 photos: front, back, left, right"
+      />
+      <AIQualityCheck 
+        photos={deliveryPhotos}
+        onPass={markDeliveryComplete}
+      />
+    </DeliveryVerification>
+  )}
+  
+  {booking.status === 'active' && (
+    <ReturnVerification>
+      <CameraCapture 
+        onCapture={uploadReturnPhotos}
+        guidance="Same angles as delivery"
+      />
+      <AIComparisonResults 
+        deliveryPhotos={booking.deliveryPhotos}
+        returnPhotos={returnPhotos}
+        aiReport={damageReport}
+      />
+      {damageReport.damage_detected ? (
+        <DisputeFlow booking={booking} />
+      ) : (
+        <CompleteReturn onConfirm={settleBooking} />
+      )}
+    </ReturnVerification>
+  )}
+</PhotoVerificationFlow>
+
+4. AR Experience (/ar/[eventId])
+Already implemented with 8th Wall integration
+Additional Features:
+
+Leaderboard Overlay: Top 10 scores (real-time via WebSocket)
+Social Share: Capture + AI overlay + share to Twitter/Instagram
+Wallet Connect: Magic Link for custodial wallets
+Claim Flow: Voucher → On-chain transaction → Success animation
+
+
+5. Vendor Dashboard (/vendor)
+Features:
+
+My Props - List/edit/deactivate props
+Bookings - Incoming requests, calendar view
+Delivery Scans - Photo verification interface
+Earnings - Revenue tracking, withdrawal to wallet
+Disputes - View/respond to damage claims
+
+
+🔐 Authentication & Wallet Flows
+1. Web3 Native (Pera Wallet)
+tsx// src/lib/auth/PeraAuth.ts
+import { PeraWalletConnect } from '@perawallet/connect';
+
+export class PeraAuth {
+  private peraWallet: PeraWalletConnect;
+  
+  constructor() {
+    this.peraWallet = new PeraWalletConnect({
+      chainId: 416002 // TestNet
+    });
+  }
+  
+  async connect(): Promise<string> {
+    const accounts = await this.peraWallet.connect();
+    const address = accounts[0];
+    
+    // Register user if new
+    await fetch('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ wallet: address, type: 'web3' })
+    });
+    
+    return address;
+  }
+  
+  async signMessage(message: string): Promise<string> {
+    const encoded = new TextEncoder().encode(message);
+    const signature = await this.peraWallet.signData([{
+      data: encoded,
+      message: "Authenticate with Spectacle"
+    }]);
+    return signature;
+  }
+}
+
+2. Custodial Wallet (Magic Link)
+Use Case: Attendees without crypto wallets can play AR games
+tsx// src/lib/auth/MagicAuth.ts
+import { Magic } from 'magic-sdk';
+import { AlgorandExtension } from '@magic-ext/algorand';
+
+export class MagicAuth {
+  private magic: Magic;
+  
+  constructor() {
+    this.magic = new Magic(process.env.MAGIC_PUBLISHABLE_KEY, {
+      extensions: {
+        algorand: new AlgorandExtension({
+          rpcUrl: 'https://testnet-api.algonode.cloud'
+        })
+      }
+    });
+  }
+  
+  async loginWithEmail(email: string): Promise<string> {
+    await this.magic.auth.loginWithEmailOTP({ email });
+    const metadata = await this.magic.user.getMetadata();
+    
+    // Create custodial wallet on Algorand
+    const algorandAddress = metadata.publicAddress;
+    
+    // Register user
+    await fetch('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        email, 
+        wallet: algorandAddress,
+        type: 'custodial',
+        magic_id: metadata.issuer
+      })
+    });
+    
+    return algorandAddress;
+  }
+  
+  async signTransaction(txn: Uint8Array): Promise<Uint8Array> {
+    const signedTxn = await this.magic.algorand.signTransaction(txn);
+    return signedTxn;
+  }
+}
+
+📊 Analytics & Metrics
+Real-Time Dashboard Metrics:
+Event Organizer View:
+
+Total Players
+Avg Score
+Completion Rate
+Social Shares
+Wallet Opt-In Rate
+Rewards Claimed (by tier)
+Geography Heatmap
+Peak Play Times
+
+Implementation:
+tsx// src/pages/dashboard/events/[eventId]/analytics.astro
+import { AnalyticsChart } from '../components/AnalyticsChart';
+
+const metrics = await fetchEventMetrics(eventId);
+
+<div class="grid grid-cols-3 gap-6">
+  <MetricCard 
+    title="Total Players" 
+    value={metrics.total_players} 
+    change="+12% vs last hour"
+  />
+  <MetricCard 
+    title="Avg Score" 
+    value={metrics.avg_score} 
+    change="+5 points"
+  />
+  <MetricCard 
+    title="Rewards Claimed" 
+    value={metrics.total_claims} 
+    icon="🎁"
+  />
+</div>
+
+<AnalyticsChart 
+  data={metrics.hourly_players} 
+  type="line"
+  title="Players Over Time"
+/>
+
+<GeographyMap 
+  locations={metrics.player_locations}
+  heatmap={true}
+/>
+
+<LeaderboardTable 
+  topPlayers={metrics.leaderboard}
+  showWallets={false} // Privacy
+/>
+
+🚀 Deployment Architecture
+┌─────────────────────────────────────────────────────────────┐
+│                        CLOUDFLARE                            │
+├─────────────────────────────────────────────────────────────┤
+│  CDN + DDoS Protection + SSL + DNS                          │
+└─────────────────────────────────────────────────────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     LOAD BALANCER                            │
+│                   (AWS ALB or Cloudflare)                    │
+└─────────────────────────────────────────────────────────────┘
+                          ▼
+    ┌──────────────────────────────────────────────┐
+    │                                              │
+    ▼                                              ▼
+┌─────────────────┐                  ┌──────────────────────┐
+│  FRONTEND       │                  │   API SERVICES       │
+│  (Vercel)       │                  │   (AWS ECS/Fargate)  │
+│                 │                  │                      │
+│ - Astro SSG     │                  │ - api-signer         │
+│ - Static Assets │                  │ - ai-service         │
+│ - 8th Wall AR   │                  │ - photo-processor    │
+└─────────────────┘                  └──────────────────────┘
+                                              ▼
+                          ┌──────────────────────────────────┐
+                          │     DATABASES & STORAGE          │
+                          ├──────────────────────────────────┤
+                          │ - PostgreSQL (AWS RDS)          │
+                          │ - Redis (ElastiCache)           │
+                          │ - S3 (Media Storage)            │
+                          │ - IPFS (Pinata for 3D models)   │
+                          └──────────────────────────────────┘
+                                              ▼
+                          ┌──────────────────────────────────┐
+                          │    ALGORAND BLOCKCHAIN           │
+                          ├──────────────────────────────────┤
+                          │ - Smart Contracts (TestNet)     │
+                          │ - Indexer (AlgoNode)            │
+                          │ - AlgodAPI                       │
+                          └──────────────────────────────────┘
+Cost Estimate (MVP):
+
+Vercel: $0 (Hobby tier)
+AWS ECS Fargate: ~$50/month
+RDS PostgreSQL: ~$30/month
+S3 + CloudFront: ~$20/month
+8th Wall: $0 (Developer mode with watermark)
+Magic Link: $0 (up to 1000 MAU)
+Total: ~$100/month
+
+
+🎯 MVP Implementation Roadmap
+Week 1: Core Infrastructure
+
+✅ Monorepo setup (PNPM workspaces)
+✅ Database schema + migrations
+✅ Auth system (Pera + Magic)
+✅ Smart contracts (RentalEscrow, EventEngine, DramaMeter)
+
+Week 2: Marketplace & Rentals
+
+Prop listing flow
+Booking system + Escrow contract integration
+Photo verification UI
+AI damage detection integration
+
+Week 3: AR Experience
+
+8th Wall integration
+Tap target game
+Voucher signer
+Claim flow
+
+Week 4: Organizer Dashboard
+
+Event creation wizard
+AR game builder (image-to-3D AI)
+QR code generator
+Analytics dashboard
+
+Week 5: Social & Rewards
+
+Share flow with branded overlays
+Coupon redemption (Shopify integration stub)
+Leaderboard
+Social metrics tracking
+
+Week 6: Testing & Polish
+
+Multi-device testing
+Performance optimization
+Security audit (smart contracts)
+Demo prep
+
+
+🔒 Security Considerations
+
+Smart Contract Security:
+
+Formal verification of RentalEscrow logic
+Third-party audit (Certora, OpenZeppelin)
+Testnet → Mainnet migration plan
+
+
+Photo Verification Security:
+
+EXIF metadata validation (timestamp, GPS)
+Blockchain-anchored hashes (can't modify)
+Multi-angle requirement (4+ photos)
+
+
+AI Oracle Trust:
+
+Decentralized oracle network (future v2)
+Human review for disputes >$500
+Transparent AI model versioning on-chain
+
+
+User Data Privacy:
+
+No PII on-chain (only wallet addresses)
+GDPR-compliant data deletion
+Encrypted storage for photos
+
+
+Wallet Security:
+
+Never store private keys
+Magic Link: Non-custodial option for power users
+2FA for high-value rentals
+
+
+
+
+📈 Success Metrics (3 Months Post-Launch)
+Marketplace:
+
+100+ Props listed
+50+ Active rentals/month
+<5% Dispute rate
+95% Damage detection accuracy
+
+AR Experiences:
+
+10+ Events using AR
+10,000+ Game sessions
+70%+ Completion rate
+40%+ Social share rate
+
+On-Chain:
+
+5,000+ Wallet connections
+3,000+ Claim transactions
+$50K+ Total Value Locked (deposits)
+
+
+🌟 Future Enhancements (v2+)
+
+Multi-Chain: Expand to Ethereum, Polygon for broader reach
+Rental Marketplace: Peer-to-peer prop lending (Airbnb model)
+Advanced AR: Multiplayer games, hand tracking, spatial anchors
+AI Content Studio: Full 3D scene generation from text prompts
+DAO Governance: Community votes on dispute resolutions
+White-Label: SaaS offering for agencies
+Mobile Apps: Native iOS/Android with ARKit/ARCore
+Metaverse Integration: Props as digital twins in Decentraland/Sandbox
+
+
+This architecture provides a complete, production-ready foundation for Spectacle MVP. Every component is designed to scale, with AI enhancing user experience at critical touchpoints while blockchain ensures trust and transparency.
