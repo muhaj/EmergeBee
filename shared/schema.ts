@@ -147,6 +147,80 @@ export interface SignedVoucher {
   voucherHash: string; // hex string
 }
 
+// Vendors (prop owners with payment preferences)
+export const vendors = pgTable("vendors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: text("wallet_address").notNull().unique(), // Their Algorand wallet or identifier
+  name: text("name").notNull(),
+  email: text("email"),
+  
+  // Payment preferences
+  paymentMethod: text("payment_method").notNull().default('pending'), // 'stripe', 'bank', 'blockchain', 'pending'
+  
+  // Payment details (stored as JSON for flexibility)
+  stripeAccountId: text("stripe_account_id"), // Stripe Connect account ID
+  bankAccountInfo: jsonb("bank_account_info").$type<{
+    accountName?: string;
+    accountNumber?: string;
+    routingNumber?: string;
+    bankName?: string;
+  }>(),
+  blockchainWallet: text("blockchain_wallet"), // Algorand wallet address for payouts
+  
+  // Balance tracking
+  pendingBalance: decimal("pending_balance", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  totalEarnings: decimal("total_earnings", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  totalPayouts: decimal("total_payouts", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertVendorSchema = createInsertSchema(vendors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  pendingBalance: true,
+  totalEarnings: true,
+  totalPayouts: true,
+});
+
+export type InsertVendor = z.infer<typeof insertVendorSchema>;
+export type Vendor = typeof vendors.$inferSelect;
+
+// Payouts (vendor payout transactions)
+export const payouts = pgTable("payouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vendorId: text("vendor_id").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  method: text("method").notNull(), // 'stripe', 'bank', 'blockchain'
+  status: text("status").notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
+  
+  // Related bookings (array of booking IDs included in this payout)
+  bookingIds: jsonb("booking_ids").$type<string[]>().notNull(),
+  
+  // Transaction details
+  transactionId: text("transaction_id"), // Stripe transfer ID, bank reference, or Algorand tx ID
+  transactionDetails: jsonb("transaction_details").$type<{
+    fee?: number;
+    currency?: string;
+    destination?: string;
+    errorMessage?: string;
+  }>(),
+  
+  // Timestamps
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertPayoutSchema = createInsertSchema(payouts).omit({
+  id: true,
+  requestedAt: true,
+});
+
+export type InsertPayout = z.infer<typeof insertPayoutSchema>;
+export type Payout = typeof payouts.$inferSelect;
+
 // Photo Uploads
 export interface PhotoUpload {
   id: string;

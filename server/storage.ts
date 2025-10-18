@@ -7,13 +7,19 @@ import {
   type InsertEvent,
   type GameSession,
   type InsertGameSession,
+  type Vendor,
+  type InsertVendor,
+  type Payout,
+  type InsertPayout,
   props,
   bookings,
   events,
   gameSessions,
+  vendors,
+  payouts,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, sql as drizzleSql } from "drizzle-orm";
 
 export interface IStorage {
   // Props
@@ -43,6 +49,21 @@ export interface IStorage {
   getGameSessionsByEvent(eventId: string): Promise<GameSession[]>;
   createGameSession(session: InsertGameSession): Promise<GameSession>;
   updateGameSession(id: string, session: Partial<GameSession>): Promise<GameSession | undefined>;
+
+  // Vendors
+  getAllVendors(): Promise<Vendor[]>;
+  getVendor(id: string): Promise<Vendor | undefined>;
+  getVendorByWallet(walletAddress: string): Promise<Vendor | undefined>;
+  createVendor(vendor: InsertVendor): Promise<Vendor>;
+  updateVendor(id: string, vendor: Partial<Vendor>): Promise<Vendor | undefined>;
+  updateVendorBalance(id: string, amount: string, operation: 'add' | 'subtract'): Promise<Vendor | undefined>;
+
+  // Payouts
+  getAllPayouts(): Promise<Payout[]>;
+  getPayout(id: string): Promise<Payout | undefined>;
+  getPayoutsByVendor(vendorId: string): Promise<Payout[]>;
+  createPayout(payout: InsertPayout): Promise<Payout>;
+  updatePayout(id: string, payout: Partial<Payout>): Promise<Payout | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -278,6 +299,83 @@ export class DatabaseStorage implements IStorage {
       .update(gameSessions)
       .set(updateData)
       .where(eq(gameSessions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Vendors
+  async getAllVendors(): Promise<Vendor[]> {
+    return await db.select().from(vendors);
+  }
+
+  async getVendor(id: string): Promise<Vendor | undefined> {
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.id, id));
+    return vendor || undefined;
+  }
+
+  async getVendorByWallet(walletAddress: string): Promise<Vendor | undefined> {
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.walletAddress, walletAddress));
+    return vendor || undefined;
+  }
+
+  async createVendor(insertVendor: InsertVendor): Promise<Vendor> {
+    const [vendor] = await db.insert(vendors).values(insertVendor).returning();
+    return vendor;
+  }
+
+  async updateVendor(id: string, updates: Partial<Vendor>): Promise<Vendor | undefined> {
+    const [updated] = await db
+      .update(vendors)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(vendors.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async updateVendorBalance(id: string, amount: string, operation: 'add' | 'subtract'): Promise<Vendor | undefined> {
+    const vendor = await this.getVendor(id);
+    if (!vendor) return undefined;
+
+    const currentBalance = parseFloat(vendor.pendingBalance || '0');
+    const changeAmount = parseFloat(amount);
+    const newBalance = operation === 'add' ? currentBalance + changeAmount : currentBalance - changeAmount;
+
+    const currentEarnings = parseFloat(vendor.totalEarnings || '0');
+    const newEarnings = operation === 'add' ? currentEarnings + changeAmount : currentEarnings;
+
+    return await this.updateVendor(id, {
+      pendingBalance: newBalance.toFixed(2),
+      totalEarnings: newEarnings.toFixed(2),
+    });
+  }
+
+  // Payouts
+  async getAllPayouts(): Promise<Payout[]> {
+    return await db.select().from(payouts);
+  }
+
+  async getPayout(id: string): Promise<Payout | undefined> {
+    const [payout] = await db.select().from(payouts).where(eq(payouts.id, id));
+    return payout || undefined;
+  }
+
+  async getPayoutsByVendor(vendorId: string): Promise<Payout[]> {
+    return await db
+      .select()
+      .from(payouts)
+      .where(eq(payouts.vendorId, vendorId));
+  }
+
+  async createPayout(insertPayout: InsertPayout): Promise<Payout> {
+    const [payout] = await db.insert(payouts).values(insertPayout).returning();
+    return payout;
+  }
+
+  async updatePayout(id: string, updates: Partial<Payout>): Promise<Payout | undefined> {
+    const [updated] = await db
+      .update(payouts)
+      .set(updates)
+      .where(eq(payouts.id, id))
       .returning();
     return updated || undefined;
   }
