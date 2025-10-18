@@ -1,19 +1,34 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Calendar, Users, Trophy, QrCode, Package, ExternalLink, Shield } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Calendar, Users, Trophy, QrCode, Package, ExternalLink, Shield, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import CreateEventModal from "@/components/CreateEventModal";
 import QRGenerator from "@/components/QRGenerator";
 import type { Event, Booking } from "@shared/schema";
 
 export default function OrganizerDashboard() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showQRGenerator, setShowQRGenerator] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
 
   const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
@@ -21,6 +36,27 @@ export default function OrganizerDashboard() {
 
   const { data: bookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings/my-bookings"],
+  });
+
+  const deleteEventMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      return await apiRequest("DELETE", `/api/events/${eventId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({
+        title: "Event deleted",
+        description: "The event has been successfully removed.",
+      });
+      setEventToDelete(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete event. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const stats = {
@@ -193,6 +229,15 @@ export default function OrganizerDashboard() {
                       >
                         <Trophy className="w-4 h-4 mr-2" />
                         Analytics
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setEventToDelete(event)}
+                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        data-testid={`button-delete-event-${event.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </CardFooter>
                   </Card>
@@ -470,6 +515,29 @@ export default function OrganizerDashboard() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
+        <AlertDialogContent data-testid="dialog-delete-event">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "<span className="font-semibold">{eventToDelete?.name}</span>"? 
+              This action cannot be undone. All associated game sessions and QR codes will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => eventToDelete && deleteEventMutation.mutate(eventToDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteEventMutation.isPending ? "Deleting..." : "Delete Event"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

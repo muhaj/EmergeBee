@@ -301,7 +301,7 @@ export default function ARGame() {
       // Submit opt-in transaction
       const client = new algosdk.Algodv2("", "https://testnet-api.algonode.cloud", "");
       const response = await client.sendRawTransaction(signedTxns).do();
-      const txId = response.txId || response.txid || "";
+      const txId = response.txid || "";
 
       toast({
         title: "Opt-in transaction submitted!",

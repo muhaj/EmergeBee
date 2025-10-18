@@ -35,6 +35,7 @@ export interface IStorage {
   getEventsByOrganizer(wallet: string): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: string, event: Partial<Event>): Promise<Event | undefined>;
+  deleteEvent(id: string): Promise<void>;
 
   // Game Sessions
   getAllGameSessions(): Promise<GameSession[]>;
@@ -244,6 +245,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(events.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  async deleteEvent(id: string): Promise<void> {
+    await db.delete(events).where(eq(events.id, id));
   }
 
   // Game Sessions

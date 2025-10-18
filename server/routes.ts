@@ -211,6 +211,22 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Delete event
+  app.delete("/api/events/:id", async (req, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+
+      await storage.deleteEvent(req.params.id);
+      res.json({ success: true, message: "Event deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      res.status(500).json({ error: "Failed to delete event" });
+    }
+  });
+
   // ============================================================================
   // GAME SESSIONS ENDPOINTS
   // ============================================================================
