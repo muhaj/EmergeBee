@@ -870,7 +870,7 @@ export default function ARGame() {
                   Play Again
                 </Button>
               </CardContent>
-              </Card>
+            </Card>
           </div>
         </div>
       )}
