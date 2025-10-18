@@ -45,8 +45,12 @@ export default function ARGame() {
       return await apiRequest("POST", "/api/game-sessions", data);
     },
     onSuccess: (data: any) => {
+      console.log("Game session response:", data);
       if (data?.voucher) {
+        console.log("Voucher received:", data.voucher);
         setVoucher(data.voucher as SignedVoucher);
+      } else {
+        console.log("No voucher in response");
       }
       toast({
         title: "Score submitted!",
@@ -54,6 +58,7 @@ export default function ARGame() {
       });
     },
     onError: (error: any) => {
+      console.error("Game session error:", error);
       toast({
         title: "Failed to submit score",
         description: error.message || "Please try again",
@@ -381,15 +386,25 @@ export default function ARGame() {
                     <Button
                       size="lg"
                       onClick={claimRewards}
-                      disabled={!voucher || !getRewardTier()}
+                      disabled={submitScoreMutation.isPending || !voucher || !getRewardTier()}
                       className="w-full bg-gradient-to-r from-purple-600 to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       data-testid="button-claim-rewards"
                     >
                       <Trophy className="w-5 h-5 mr-2" />
-                      {voucher ? 'Claim Rewards On-Chain' : 'Submitting Score...'}
+                      {submitScoreMutation.isPending 
+                        ? 'Submitting Score...' 
+                        : voucher 
+                        ? 'Claim Rewards On-Chain' 
+                        : 'Waiting for Voucher...'}
                     </Button>
                     
-                    {!getRewardTier() && (
+                    {!submitScoreMutation.isPending && !voucher && getRewardTier() && (
+                      <p className="text-white/60 text-xs text-center">
+                        Generating cryptographic voucher...
+                      </p>
+                    )}
+                    
+                    {!getRewardTier() && !submitScoreMutation.isPending && (
                       <p className="text-white/60 text-xs text-center">
                         You need to earn a reward tier to claim
                       </p>
