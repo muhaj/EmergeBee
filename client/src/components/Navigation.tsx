@@ -1,10 +1,12 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Package, LayoutDashboard, Home, Store } from "lucide-react";
+import { Package, LayoutDashboard, Home, Store, Wallet } from "lucide-react";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
+import { useWallet } from "@/lib/WalletContext";
 
 export default function Navigation() {
   const [location] = useLocation();
+  const { accountAddress, isConnected, connectWallet, disconnectWallet } = useWallet();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg">
@@ -42,8 +44,31 @@ export default function Navigation() {
             </SignedIn>
           </nav>
 
-          {/* Authentication */}
+          {/* Authentication & Wallet */}
           <div className="flex items-center gap-3">
+            {/* Pera Wallet Connection */}
+            {!isConnected ? (
+              <Button 
+                onClick={connectWallet} 
+                variant="outline"
+                data-testid="button-connect-wallet"
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                Connect Wallet
+              </Button>
+            ) : (
+              <Button 
+                onClick={disconnectWallet} 
+                variant="outline"
+                className="font-mono text-sm"
+                data-testid="button-disconnect-wallet"
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                {accountAddress?.slice(0, 6)}...{accountAddress?.slice(-4)}
+              </Button>
+            )}
+
+            {/* Clerk Authentication */}
             <SignedOut>
               <SignInButton mode="modal">
                 <Button 
