@@ -454,10 +454,17 @@ export function registerRoutes(app: Express): Server {
 
       // Call Python script to handle opt-in check and transfer
       const { spawn } = await import("child_process");
+      
+      // Ensure asaId is string
+      const asaIdStr = String(asaId);
+      const walletAddr = voucherData.wallet;
+      
+      console.log("Calling Python script with:", { walletAddr, asaIdStr });
+      
       const pythonProcess = spawn("python3", [
         "contracts/create_claim_transaction.py",
-        voucherData.wallet,
-        asaId,
+        walletAddr,
+        asaIdStr,
         "1", // Transfer 1 token
       ]);
 
@@ -470,6 +477,7 @@ export function registerRoutes(app: Express): Server {
 
       pythonProcess.stderr.on("data", (data) => {
         scriptError += data.toString();
+        console.error("Python stderr:", data.toString());
       });
 
       await new Promise<void>((resolve, reject) => {
