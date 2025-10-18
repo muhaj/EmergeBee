@@ -86,6 +86,9 @@ export const events = pgTable("events", {
     bronzeThreshold: number;
     silverThreshold: number;
     goldThreshold: number;
+    bronzeAsaId?: string;
+    silverAsaId?: string;
+    goldAsaId?: string;
   }>().notNull(),
   zones: jsonb("zones").$type<string[]>().notNull().default(sql`'["A1", "A2", "B1", "B2"]'::jsonb`),
   status: text("status").notNull().default('draft'), // 'draft', 'active', 'completed'
