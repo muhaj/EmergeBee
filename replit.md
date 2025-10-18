@@ -4,9 +4,10 @@
 Spectacle is a Web3 platform enabling trustless event prop rentals with AR gamification and blockchain-secured rewards on Algorand. The platform combines prop marketplace functionality with WebAR tap-target games and cryptographic voucher-based reward systems.
 
 ## Project Status
-**Current Version**: MVP  
+**Current Version**: MVP → Production Transition  
 **Last Updated**: October 18, 2025  
-**Development Stage**: Integration & Testing Phase
+**Development Stage**: Real Blockchain Integration Phase  
+**Recent Milestone**: PostgreSQL + Pera Wallet Integration Complete
 
 ## Architecture
 
@@ -22,9 +23,10 @@ Spectacle is a Web3 platform enabling trustless event prop rentals with AR gamif
 
 ### Backend Stack
 - **Server**: Express.js + TypeScript
-- **Storage**: In-memory (MemStorage) for MVP
+- **Database**: PostgreSQL (Neon) with Drizzle ORM
 - **Cryptography**: @noble/ed25519 for voucher signing
 - **Validation**: Zod schemas with drizzle-zod
+- **Blockchain**: Algorand TestNet (Pera Wallet SDK)
 
 ### Design System
 **Color Scheme**: Purple-to-pink gradient Web3 aesthetic
@@ -47,8 +49,9 @@ Spectacle is a Web3 platform enabling trustless event prop rentals with AR gamif
 ### 2. Booking Flow
 - Date range selection
 - Automatic rental fee calculation
-- Mock blockchain escrow integration
-- Wallet address input for payment
+- Real Pera Wallet connection (Algorand TestNet)
+- Read-only wallet address display
+- Wallet connection requirement enforcement
 
 ### 3. Organizer Dashboard
 - Event creation and management
@@ -181,10 +184,12 @@ Spectacle is a Web3 platform enabling trustless event prop rentals with AR gamif
 
 ## Technical Decisions
 
-### Why In-Memory Storage?
-- MVP prototype speed
-- No database setup overhead
-- Easy to migrate to PostgreSQL later
+### Why PostgreSQL?
+- Production-ready data persistence
+- ACID compliance for bookings/events
+- Native UUID support for IDs
+- Easy Replit integration with Neon
+- Supports rollback capabilities
 
 ### Why Ed25519?
 - Fast signature generation
@@ -198,12 +203,16 @@ Spectacle is a Web3 platform enabling trustless event prop rentals with AR gamif
 - Cross-platform (iOS/Android)
 - Lower barrier to entry
 
-## Mock/Simplified Features (MVP)
-- **Blockchain Escrow**: Mock transaction IDs (no real Algorand integration)
-- **Wallet Connection**: Mock addresses (no real wallet integration)
-- **Photo Verification**: Placeholder (no actual image upload)
-- **AR Targets**: Simulated (no real AR marker tracking)
-- **Reward Claiming**: Mock on-chain transactions
+## Production Features (Implemented)
+- ✅ **PostgreSQL Database**: Full persistence with Drizzle ORM
+- ✅ **Pera Wallet Integration**: Real Algorand TestNet wallet connection
+- ✅ **Ed25519 Voucher Signing**: Cryptographic reward vouchers
+
+## Mock/Simplified Features (In Progress)
+- **Blockchain Escrow**: Mock transaction IDs (upgrading to real Algorand txns)
+- **Photo Verification**: Placeholder (AI verification planned)
+- **AR Targets**: Simulated (8th Wall upgrade planned)
+- **Reward Claiming**: Mock on-chain transactions (ASA minting planned)
 
 ## Development Guidelines
 
@@ -229,10 +238,11 @@ Spectacle is a Web3 platform enabling trustless event prop rentals with AR gamif
 - Accessible color contrasts
 
 ## Known Limitations
-- No real blockchain integration
-- No actual photo upload/storage
+- Escrow still uses mock transaction IDs (upgrading to real Algorand txns)
+- No smart contract deployment yet (PyTeal contracts designed)
+- No actual photo upload/storage (AI verification planned)
 - No conflict checking for booking dates
-- No authentication/authorization
+- No authentication beyond wallet connection
 - No rate limiting or security hardening
 
 ## Future Enhancements
@@ -245,7 +255,9 @@ Spectacle is a Web3 platform enabling trustless event prop rentals with AR gamif
 - Automated dispute resolution
 
 ## Environment Variables
-- `SESSION_SECRET` - Express session secret (configured)
+- `DATABASE_URL` - PostgreSQL connection string (Neon)
+- `SESSION_SECRET` - Express session secret
+- `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` - Database credentials
 
 ## Running the Project
 1. Start development server: `npm run dev`

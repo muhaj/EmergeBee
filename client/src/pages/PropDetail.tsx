@@ -317,13 +317,17 @@ export default function PropDetail() {
                     </Label>
                     <Input
                       id="wallet"
-                      value={walletAddress}
-                      onChange={(e) => setWalletAddress(e.target.value)}
-                      placeholder="ALGORAND_ADDRESS"
-                      className="font-mono text-sm"
-                      required
+                      value={accountAddress || "Not connected"}
+                      readOnly
+                      placeholder="Connect Pera Wallet first"
+                      className="font-mono text-sm bg-muted"
                       data-testid="input-wallet"
                     />
+                    {!isConnected && (
+                      <p className="text-xs text-muted-foreground">
+                        Connect your Pera Wallet using the button in the header
+                      </p>
+                    )}
                   </div>
 
                   <Separator />
