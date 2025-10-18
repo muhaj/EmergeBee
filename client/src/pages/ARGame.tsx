@@ -151,14 +151,18 @@ export default function ARGame() {
   const claimRewardsMutation = useMutation({
     mutationFn: async (voucherData: SignedVoucher) => {
       const response = await apiRequest("POST", "/api/rewards/prepare-claim", voucherData);
-      return await response.json();
-    },
-    onSuccess: async (data: any) => {
+      const data = await response.json();
+      
+      // If needs opt-in, handle it immediately
       if (data.needsOptin) {
-        // Player needs to opt-in to the ASA
-        await handleOptIn(data);
-      } else {
-        // Reward already claimed!
+        return await handleOptIn(data);
+      }
+      
+      return data;
+    },
+    onSuccess: (data: any) => {
+      // Only show success if we got here (opt-in flow handles its own success)
+      if (data && data.txId) {
         toast({
           title: "🎉 Reward Claimed!",
           description: `${data.tierName} medal sent to your wallet! TX: ${data.txId.substring(0, 10)}...`,
@@ -200,6 +204,10 @@ export default function ARGame() {
       const { PeraWalletConnect } = await import("@perawallet/connect");
       const peraWallet = new PeraWalletConnect();
 
+      // Reconnect to existing session
+      const accounts = await peraWallet.reconnectSession();
+      console.log("Reconnected accounts:", accounts);
+
       // Decode base64 unsigned transaction
       const unsignedTxnB64 = claimData.unsignedTxn;
       const unsignedTxnBytes = Uint8Array.from(atob(unsignedTxnB64), c => c.charCodeAt(0));
@@ -221,19 +229,30 @@ export default function ARGame() {
       // Wait a moment for confirmation, then complete claim
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      completeClaimMutation.mutate({
+      const completeResponse = await apiRequest("POST", "/api/rewards/complete-claim", {
         sessionId: claimData.sessionId,
         optInTxId: txId,
         playerWallet: accountAddress!,
         asaId: claimData.asaId,
       });
+      
+      const completeData = await completeResponse.json();
+      
+      toast({
+        title: "🎉 Reward Claimed!",
+        description: `Medal sent to your wallet! TX: ${completeData.txId?.substring(0, 10)}...`,
+      });
+
+      return completeData;
 
     } catch (error: any) {
+      console.error("Opt-in error:", error);
       toast({
         title: "Opt-in failed",
         description: error.message || "Please try again",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
