@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ interface QRGeneratorProps {
 
 export default function QRGenerator({ event, onClose }: QRGeneratorProps) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [qrCodes, setQrCodes] = useState<Map<string, string>>(new Map());
   const [copiedZone, setCopiedZone] = useState<string | null>(null);
 
@@ -88,6 +90,11 @@ export default function QRGenerator({ event, onClose }: QRGeneratorProps) {
       title: "Link copied",
       description: `AR experience link for Zone ${zone} copied to clipboard.`,
     });
+  };
+
+  const openARGame = (zone: string) => {
+    navigate(`/ar-game/${event.id}?zone=${zone}`);
+    onClose();
   };
 
   return (
@@ -166,12 +173,16 @@ export default function QRGenerator({ event, onClose }: QRGeneratorProps) {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {/* QR Code Image */}
-                      <div className="aspect-square bg-white rounded-lg p-4 border-2 border-primary/20">
+                      {/* QR Code Image - Clickable */}
+                      <div 
+                        className="aspect-square bg-white rounded-lg p-4 border-2 border-primary/20 cursor-pointer hover:border-primary/40 transition-all hover-elevate"
+                        onClick={() => openARGame(zone)}
+                        data-testid={`qr-container-${zone}`}
+                      >
                         {qrDataUrl ? (
                           <img
                             src={qrDataUrl}
-                            alt={`QR Code for Zone ${zone}`}
+                            alt={`QR Code for Zone ${zone} - Click to start AR game`}
                             className="w-full h-full"
                             data-testid={`img-qr-${zone}`}
                           />
