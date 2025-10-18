@@ -378,6 +378,226 @@ export function registerRoutes(app: Express): Server {
   });
 
   // ============================================================================
+  // REWARD CLAIMING ENDPOINTS
+  // ============================================================================
+
+  // Prepare reward claim - generates unsigned Algorand transaction
+  app.post("/api/rewards/prepare-claim", async (req, res) => {
+    try {
+      const { voucherData, signature, voucherHash } = req.body as SignedVoucher;
+
+      // Recreate hash
+      const voucherJson = JSON.stringify(voucherData);
+      const computedHash = createHash("sha256").update(voucherJson).digest("hex");
+
+      if (computedHash !== voucherHash) {
+        return res.status(400).json({ error: "Invalid voucher: hash mismatch" });
+      }
+
+      // Verify signature
+      await initVoucherKeys();
+      const messageHash = Buffer.from(voucherHash, "hex");
+      const signatureBytes = Buffer.from(signature, "hex");
+      
+      const isValid = await ed25519.verify(signatureBytes, messageHash, VOUCHER_PUBLIC_KEY);
+
+      if (!isValid) {
+        return res.status(400).json({ error: "Invalid voucher: signature verification failed" });
+      }
+
+      // Check expiration
+      const now = Math.floor(Date.now() / 1000);
+      if (voucherData.exp < now) {
+        return res.status(400).json({ error: "Voucher expired" });
+      }
+
+      // Verify session exists and hasn't been claimed
+      const session = await storage.getGameSession(voucherData.sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Game session not found" });
+      }
+
+      if (session.voucherClaimed) {
+        return res.status(400).json({ error: "Reward already claimed" });
+      }
+
+      // Get event to retrieve ASA ID
+      const event = await storage.getEvent(voucherData.eventId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+
+      // Determine which ASA to send based on tier
+      let asaId: string | undefined;
+      let tierName: string;
+      
+      switch (voucherData.tier) {
+        case 1:
+          asaId = event.rewards.bronzeAsaId;
+          tierName = "Bronze";
+          break;
+        case 2:
+          asaId = event.rewards.silverAsaId;
+          tierName = "Silver";
+          break;
+        case 3:
+          asaId = event.rewards.goldAsaId;
+          tierName = "Gold";
+          break;
+        default:
+          return res.status(400).json({ error: "Invalid reward tier" });
+      }
+
+      if (!asaId) {
+        return res.status(500).json({ error: `${tierName} ASA not configured for this event` });
+      }
+
+      // Call Python script to handle opt-in check and transfer
+      const { spawn } = await import("child_process");
+      const pythonProcess = spawn("python3", [
+        "contracts/create_claim_transaction.py",
+        voucherData.wallet,
+        asaId,
+        "1", // Transfer 1 token
+      ]);
+
+      let scriptOutput = "";
+      let scriptError = "";
+
+      pythonProcess.stdout.on("data", (data) => {
+        scriptOutput += data.toString();
+      });
+
+      pythonProcess.stderr.on("data", (data) => {
+        scriptError += data.toString();
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        pythonProcess.on("close", (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Python script failed: ${scriptError}`));
+          }
+        });
+      });
+
+      const result = JSON.parse(scriptOutput);
+
+      if (!result.success) {
+        return res.status(500).json({ error: result.error });
+      }
+
+      // If needs opt-in, return unsigned transaction for player to sign
+      if (result.needs_optin) {
+        res.json({
+          success: true,
+          needsOptin: true,
+          unsignedTxn: result.unsigned_txn,
+          asaId,
+          tierName,
+          sessionId: voucherData.sessionId,
+        });
+      } else {
+        // Transfer completed by backend, mark as claimed
+        await storage.updateGameSession(voucherData.sessionId, { voucherClaimed: true });
+        
+        res.json({
+          success: true,
+          needsOptin: false,
+          txId: result.tx_id,
+          asaId,
+          tierName,
+          amount: 1,
+          message: `${tierName} medal claimed successfully!`,
+        });
+      }
+
+    } catch (error) {
+      console.error("Error preparing reward claim:", error);
+      res.status(500).json({ error: "Failed to prepare reward claim" });
+    }
+  });
+
+  // Complete reward claim - called after player opts in to ASA
+  app.post("/api/rewards/complete-claim", async (req, res) => {
+    try {
+      const { sessionId, optInTxId, playerWallet, asaId } = req.body;
+
+      if (!sessionId) {
+        return res.status(400).json({ error: "Missing sessionId" });
+      }
+
+      // Verify session exists
+      const session = await storage.getGameSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Game session not found" });
+      }
+
+      if (session.voucherClaimed) {
+        return res.status(400).json({ error: "Reward already claimed" });
+      }
+
+      // Verify opt-in transaction was submitted (optional verification)
+      // In production, you might want to check the transaction on-chain
+
+      // Now transfer the ASA to the player
+      const { spawn } = await import("child_process");
+      const pythonProcess = spawn("python3", [
+        "contracts/create_claim_transaction.py",
+        playerWallet,
+        asaId,
+        "1",
+      ]);
+
+      let scriptOutput = "";
+      let scriptError = "";
+
+      pythonProcess.stdout.on("data", (data) => {
+        scriptOutput += data.toString();
+      });
+
+      pythonProcess.stderr.on("data", (data) => {
+        scriptError += data.toString();
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        pythonProcess.on("close", (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Python script failed: ${scriptError}`));
+          }
+        });
+      });
+
+      const result = JSON.parse(scriptOutput);
+
+      if (!result.success) {
+        return res.status(500).json({ error: result.error || "Failed to transfer ASA" });
+      }
+
+      if (result.needs_optin) {
+        return res.status(400).json({ error: "ASA opt-in verification failed" });
+      }
+
+      // Mark voucher as claimed
+      await storage.updateGameSession(sessionId, { voucherClaimed: true });
+
+      res.json({
+        success: true,
+        message: "Reward claimed successfully!",
+        txId: result.tx_id,
+        optInTxId,
+      });
+
+    } catch (error) {
+      console.error("Error completing reward claim:", error);
+      res.status(500).json({ error: "Failed to complete reward claim" });
+    }
+  });
+
+  // ============================================================================
   // HEALTH CHECK
   // ============================================================================
 

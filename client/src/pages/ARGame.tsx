@@ -148,6 +148,94 @@ export default function ARGame() {
     }
   };
 
+  const claimRewardsMutation = useMutation({
+    mutationFn: async (voucherData: SignedVoucher) => {
+      const response = await apiRequest("POST", "/api/rewards/prepare-claim", voucherData);
+      return await response.json();
+    },
+    onSuccess: async (data: any) => {
+      if (data.needsOptin) {
+        // Player needs to opt-in to the ASA
+        await handleOptIn(data);
+      } else {
+        // Reward already claimed!
+        toast({
+          title: "🎉 Reward Claimed!",
+          description: `${data.tierName} medal sent to your wallet! TX: ${data.txId.substring(0, 10)}...`,
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Claim failed",
+        description: error.message || "Failed to claim reward",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const completeClaimMutation = useMutation({
+    mutationFn: async (data: { sessionId: string; optInTxId: string; playerWallet: string; asaId: string }) => {
+      const response = await apiRequest("POST", "/api/rewards/complete-claim", data);
+      return await response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "🎉 Reward Claimed!",
+        description: `Medal sent to your wallet! TX: ${data.txId.substring(0, 10)}...`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Transfer failed",
+        description: error.message || "Failed to transfer reward",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleOptIn = async (claimData: any) => {
+    try {
+      // @ts-ignore - Pera Wallet types
+      const { PeraWalletConnect } = await import("@perawallet/connect");
+      const peraWallet = new PeraWalletConnect();
+
+      // Decode base64 unsigned transaction
+      const unsignedTxnB64 = claimData.unsignedTxn;
+      const unsignedTxnBytes = Uint8Array.from(atob(unsignedTxnB64), c => c.charCodeAt(0));
+
+      // Ask player to sign opt-in transaction
+      const signedTxns = await peraWallet.signTransaction([[{ txn: unsignedTxnBytes, signers: [accountAddress!] }]]);
+      
+      // Submit opt-in transaction
+      const algod = await import("algosdk").then(m => m.default);
+      const client = new algod.Algodv2("", "https://testnet-api.algonode.cloud", "");
+      const { txId } = await client.sendRawTransaction(signedTxns).do();
+
+      toast({
+        title: "Opt-in successful!",
+        description: "Transferring reward to your wallet...",
+      });
+
+      // Wait a moment for confirmation, then complete claim
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      completeClaimMutation.mutate({
+        sessionId: claimData.sessionId,
+        optInTxId: txId,
+        playerWallet: accountAddress!,
+        asaId: claimData.asaId,
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Opt-in failed",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
   const claimRewards = () => {
     if (!accountAddress) {
       toast({
@@ -167,10 +255,8 @@ export default function ARGame() {
       return;
     }
 
-    toast({
-      title: "Rewards claimed!",
-      description: "Check your wallet for new tokens and NFTs.",
-    });
+    // Start the claim process
+    claimRewardsMutation.mutate(voucher);
   };
 
   const getRewardTier = () => {

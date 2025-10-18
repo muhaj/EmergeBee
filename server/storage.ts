@@ -41,6 +41,7 @@ export interface IStorage {
   getGameSession(id: string): Promise<GameSession | undefined>;
   getGameSessionsByEvent(eventId: string): Promise<GameSession[]>;
   createGameSession(session: InsertGameSession): Promise<GameSession>;
+  updateGameSession(id: string, session: Partial<GameSession>): Promise<GameSession | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -265,6 +266,15 @@ export class DatabaseStorage implements IStorage {
   async createGameSession(insertSession: InsertGameSession): Promise<GameSession> {
     const [session] = await db.insert(gameSessions).values(insertSession).returning();
     return session;
+  }
+
+  async updateGameSession(id: string, updateData: Partial<GameSession>): Promise<GameSession | undefined> {
+    const [updated] = await db
+      .update(gameSessions)
+      .set(updateData)
+      .where(eq(gameSessions.id, id))
+      .returning();
+    return updated || undefined;
   }
 }
 
