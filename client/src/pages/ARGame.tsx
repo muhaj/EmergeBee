@@ -683,9 +683,8 @@ export default function ARGame() {
 
       {/* Results Screen */}
       {gameState === 'finished' && (
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900 to-pink-900 z-20 overflow-y-auto">
-          <div className="min-h-full flex items-center justify-center p-4">
-            <div className="max-w-lg w-full">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900 to-pink-900 z-20 overflow-y-auto flex items-center justify-center p-4">
+          <div className="max-w-lg w-full">
               <Card className="bg-white/10 backdrop-blur-lg border-white/20">
               <CardContent className="pt-8 pb-8 space-y-6">
                 <div className="text-center">
@@ -872,7 +871,6 @@ export default function ARGame() {
                 </Button>
               </CardContent>
               </Card>
-            </div>
           </div>
         </div>
       )}
