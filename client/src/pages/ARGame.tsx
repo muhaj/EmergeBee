@@ -299,6 +299,49 @@ export default function ARGame() {
     claimRewardsMutation.mutate(voucher);
   };
 
+  const handleShare = async () => {
+    const tier = getRewardTier();
+    const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
+    const shareText = `I just scored ${score} points${tier ? ` and earned ${tierEmoji} ${tier.toUpperCase()} tier` : ''} playing ${event?.name || 'AR Game'} on Spectacle! Can you beat my score?`;
+    const shareUrl = window.location.href;
+
+    // Try native Web Share API (works on mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Spectacle AR Game - ${score} points!`,
+          text: shareText,
+          url: shareUrl,
+        });
+        toast({
+          title: "Shared successfully!",
+          description: "Thanks for spreading the word!",
+        });
+      } catch (error: any) {
+        // User cancelled share or error occurred
+        if (error.name !== 'AbortError') {
+          console.error('Share error:', error);
+        }
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        const textToCopy = `${shareText}\n${shareUrl}`;
+        navigator.clipboard.writeText(textToCopy);
+        toast({
+          title: "Copied to clipboard!",
+          description: "Share link copied. Paste it anywhere to share!",
+        });
+      } catch (error) {
+        toast({
+          title: "Share not supported",
+          description: "Try copying the URL manually to share.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const getRewardTier = () => {
     if (!event) return null;
     if (score >= event.rewards.goldThreshold) return 'gold';
@@ -561,6 +604,7 @@ export default function ARGame() {
                 <Button
                   variant="outline"
                   size="lg"
+                  onClick={handleShare}
                   className="w-full border-white/40 text-white hover:bg-white/10"
                   data-testid="button-share"
                 >
