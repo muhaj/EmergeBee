@@ -19,6 +19,7 @@ declare global {
       'a-camera': any;
       'a-light': any;
       'a-sphere': any;
+      'a-ring': any;
       'a-box': any;
       'a-cylinder': any;
       'a-plane': any;
@@ -447,72 +448,90 @@ export default function ARGame() {
     <div className="relative h-screen bg-black overflow-hidden">
       {/* Enhanced A-Frame AR Scene */}
       {gameState === 'playing' && (
-        <div className="absolute inset-0" ref={sceneRef}>
+        <div className="absolute inset-0" ref={sceneRef} style={{ touchAction: 'none' }}>
           <a-scene
             embedded
-            arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+            arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: true;"
             vr-mode-ui="enabled: false"
-            renderer="logarithmicDepthBuffer: true; precision: medium; antialias: true"
-            style={{ width: '100%', height: '100%' }}
+            renderer="logarithmicDepthBuffer: true; antialias: true;"
+            style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
           >
-            {/* Camera */}
-            <a-camera gps-camera rotation-reader />
+            {/* Camera with proper AR.js setup */}
+            <a-entity camera look-controls="enabled: false"></a-entity>
 
             {/* Lighting */}
-            <a-light type="ambient" color="#fff" intensity="0.5" />
-            <a-light type="directional" color="#fff" intensity="0.8" position="1 2 1" />
+            <a-light type="ambient" color="#fff" intensity="0.8" />
+            <a-light type="directional" color="#fff" intensity="1" position="1 1 1" />
 
-            {/* Target 1 - Animated Sphere with Glow */}
-            <a-entity position="0 1.5 -3">
+            {/* Target 1 - Front Center - Large and Visible */}
+            <a-entity position="0 0 -2">
               <a-sphere
                 id="target-1"
-                radius="0.3"
+                radius="0.4"
                 color="#ff3366"
-                metalness="0.3"
-                roughness="0.4"
+                material="shader: flat; transparent: true; opacity: 0.9"
                 data-target="true"
-                animation="property: scale; to: 1.2 1.2 1.2; dir: alternate; loop: true; dur: 800; easing: easeInOutSine"
-                animation__float="property: position; from: 0 1.5 -3; to: 0 1.8 -3; dir: alternate; loop: true; dur: 1500; easing: easeInOutQuad"
-                event-set__click="material.color: #00ff00; scale: 0.1 0.1 0.1"
+                class="clickable"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 3000; easing: linear"
+                animation__scale="property: scale; to: 1.3 1.3 1.3; dir: alternate; loop: true; dur: 1000; easing: easeInOutSine"
               />
-              {/* Glow effect */}
-              <a-sphere radius="0.35" color="#ff3366" opacity="0.3" />
+              {/* Outer glow ring */}
+              <a-ring 
+                radius-inner="0.5" 
+                radius-outer="0.7" 
+                color="#ff3366" 
+                material="shader: flat; transparent: true; opacity: 0.4; side: double"
+                rotation="0 0 0"
+                animation__rotate="property: rotation; to: 0 0 360; loop: true; dur: 4000; easing: linear"
+              />
             </a-entity>
 
-            {/* Target 2 - Different position */}
-            <a-entity position="-1.5 1.2 -2.5">
+            {/* Target 2 - Left */}
+            <a-entity position="-1.5 0 -2.5">
               <a-sphere
                 id="target-2"
-                radius="0.3"
+                radius="0.4"
                 color="#ff6633"
-                metalness="0.3"
-                roughness="0.4"
+                material="shader: flat; transparent: true; opacity: 0.9"
                 data-target="true"
-                animation="property: scale; to: 1.2 1.2 1.2; dir: alternate; loop: true; dur: 700; easing: easeInOutSine"
-                animation__float="property: position; from: -1.5 1.2 -2.5; to: -1.5 1.6 -2.5; dir: alternate; loop: true; dur: 1600; easing: easeInOutQuad"
+                class="clickable"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 2800; easing: linear"
+                animation__scale="property: scale; to: 1.3 1.3 1.3; dir: alternate; loop: true; dur: 900; easing: easeInOutSine"
               />
-              <a-sphere radius="0.35" color="#ff6633" opacity="0.3" />
+              <a-ring 
+                radius-inner="0.5" 
+                radius-outer="0.7" 
+                color="#ff6633" 
+                material="shader: flat; transparent: true; opacity: 0.4; side: double"
+                animation__rotate="property: rotation; to: 0 0 360; loop: true; dur: 3500; easing: linear"
+              />
             </a-entity>
 
-            {/* Target 3 */}
-            <a-entity position="1.5 1.4 -2.8">
+            {/* Target 3 - Right */}
+            <a-entity position="1.5 0 -2.5">
               <a-sphere
                 id="target-3"
-                radius="0.3"
+                radius="0.4"
                 color="#ff3399"
-                metalness="0.3"
-                roughness="0.4"
+                material="shader: flat; transparent: true; opacity: 0.9"
                 data-target="true"
-                animation="property: scale; to: 1.2 1.2 1.2; dir: alternate; loop: true; dur: 900; easing: easeInOutSine"
-                animation__float="property: position; from: 1.5 1.4 -2.8; to: 1.5 1.7 -2.8; dir: alternate; loop: true; dur: 1400; easing: easeInOutQuad"
+                class="clickable"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 3200; easing: linear"
+                animation__scale="property: scale; to: 1.3 1.3 1.3; dir: alternate; loop: true; dur: 1100; easing: easeInOutSine"
               />
-              <a-sphere radius="0.35" color="#ff3399" opacity="0.3" />
+              <a-ring 
+                radius-inner="0.5" 
+                radius-outer="0.7" 
+                color="#ff3399" 
+                material="shader: flat; transparent: true; opacity: 0.4; side: double"
+                animation__rotate="property: rotation; to: 0 0 360; loop: true; dur: 3800; easing: linear"
+              />
             </a-entity>
 
-            {/* Cursor for raycasting */}
-            <a-entity
-              cursor="fuse: false; rayOrigin: mouse"
-              raycaster="objects: [data-target]; far: 20; interval: 100"
+            {/* Cursor/Raycaster for click detection */}
+            <a-entity 
+              cursor="rayOrigin: mouse; fuse: false"
+              raycaster="objects: .clickable; far: 20"
             />
           </a-scene>
         </div>
@@ -520,7 +539,7 @@ export default function ARGame() {
 
       {/* HUD Overlay */}
       {gameState === 'playing' && (
-        <div className="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black/70 to-transparent pointer-events-none z-10">
+        <div className="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black/80 to-transparent pointer-events-none z-50">
           <div className="flex items-center justify-between text-white">
             <div>
               <div className="text-4xl font-bold" data-testid="text-score">
@@ -556,9 +575,9 @@ export default function ARGame() {
 
       {/* Instructions */}
       {gameState === 'playing' && (
-        <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none z-10">
-          <p className="text-white bg-black/50 inline-block px-6 py-3 rounded-full text-sm backdrop-blur-sm">
-            Tap the glowing targets to score points!
+        <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none z-50">
+          <p className="text-white bg-black/70 inline-block px-6 py-3 rounded-full text-base font-semibold backdrop-blur-sm border-2 border-white/30">
+            👆 Tap the glowing spheres!
           </p>
         </div>
       )}
