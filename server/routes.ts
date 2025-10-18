@@ -1,15 +1,370 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import {
+  insertPropSchema,
+  insertBookingSchema,
+  insertEventSchema,
+  insertGameSessionSchema,
+  type SignedVoucher,
+  type VoucherData,
+} from "@shared/schema";
+import { z } from "zod";
+import { fromError } from "zod-validation-error";
+import { randomBytes, createHash } from "crypto";
+import * as ed25519 from "@noble/ed25519";
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+// Mock Ed25519 keypair for voucher signing (in production, use secure key management)
+const VOUCHER_PRIVATE_KEY = "0000000000000000000000000000000000000000000000000000000000000001";
+const VOUCHER_PUBLIC_KEY = ed25519.sync.getPublicKey(VOUCHER_PRIVATE_KEY);
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+export function registerRoutes(app: Express): Server {
+  // ============================================================================
+  // PROPS ENDPOINTS
+  // ============================================================================
+
+  // Get all props
+  app.get("/api/props", async (_req, res) => {
+    try {
+      const props = await storage.getAllProps();
+      res.json(props);
+    } catch (error) {
+      console.error("Error fetching props:", error);
+      res.status(500).json({ error: "Failed to fetch props" });
+    }
+  });
+
+  // Get single prop by ID
+  app.get("/api/props/:id", async (req, res) => {
+    try {
+      const prop = await storage.getProp(req.params.id);
+      if (!prop) {
+        return res.status(404).json({ error: "Prop not found" });
+      }
+      res.json(prop);
+    } catch (error) {
+      console.error("Error fetching prop:", error);
+      res.status(500).json({ error: "Failed to fetch prop" });
+    }
+  });
+
+  // Create new prop
+  app.post("/api/props", async (req, res) => {
+    try {
+      const validated = insertPropSchema.parse(req.body);
+      const prop = await storage.createProp(validated);
+      res.status(201).json(prop);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromError(error).toString() });
+      }
+      console.error("Error creating prop:", error);
+      res.status(500).json({ error: "Failed to create prop" });
+    }
+  });
+
+  // ============================================================================
+  // BOOKINGS ENDPOINTS
+  // ============================================================================
+
+  // Get all bookings
+  app.get("/api/bookings", async (_req, res) => {
+    try {
+      const bookings = await storage.getAllBookings();
+      res.json(bookings);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+  });
+
+  // Get bookings for current organizer (mock - would use auth in production)
+  app.get("/api/bookings/my-bookings", async (_req, res) => {
+    try {
+      // In production, get wallet from authenticated session
+      // For MVP, return all bookings
+      const bookings = await storage.getAllBookings();
+      res.json(bookings);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+  });
+
+  // Get single booking by ID
+  app.get("/api/bookings/:id", async (req, res) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+      res.json(booking);
+    } catch (error) {
+      console.error("Error fetching booking:", error);
+      res.status(500).json({ error: "Failed to fetch booking" });
+    }
+  });
+
+  // Create new booking
+  app.post("/api/bookings", async (req, res) => {
+    try {
+      const validated = insertBookingSchema.parse(req.body);
+      
+      // Verify prop exists and is available
+      const prop = await storage.getProp(validated.propId);
+      if (!prop) {
+        return res.status(404).json({ error: "Prop not found" });
+      }
+      if (prop.status !== "active") {
+        return res.status(400).json({ error: "Prop is not available for booking" });
+      }
+
+      // Create booking
+      const booking = await storage.createBooking(validated);
+      
+      // Update prop status (in production, check for date conflicts)
+      await storage.updateProp(validated.propId, { status: "rented" });
+
+      res.status(201).json(booking);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromError(error).toString() });
+      }
+      console.error("Error creating booking:", error);
+      res.status(500).json({ error: "Failed to create booking" });
+    }
+  });
+
+  // ============================================================================
+  // EVENTS ENDPOINTS
+  // ============================================================================
+
+  // Get all events
+  app.get("/api/events", async (_req, res) => {
+    try {
+      const events = await storage.getAllEvents();
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      res.status(500).json({ error: "Failed to fetch events" });
+    }
+  });
+
+  // Get single event by ID
+  app.get("/api/events/:id", async (req, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      res.json(event);
+    } catch (error) {
+      console.error("Error fetching event:", error);
+      res.status(500).json({ error: "Failed to fetch event" });
+    }
+  });
+
+  // Create new event
+  app.post("/api/events", async (req, res) => {
+    try {
+      const validated = insertEventSchema.parse(req.body);
+      const event = await storage.createEvent(validated);
+      res.status(201).json(event);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromError(error).toString() });
+      }
+      console.error("Error creating event:", error);
+      res.status(500).json({ error: "Failed to create event" });
+    }
+  });
+
+  // Update event
+  app.patch("/api/events/:id", async (req, res) => {
+    try {
+      const event = await storage.updateEvent(req.params.id, req.body);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      res.json(event);
+    } catch (error) {
+      console.error("Error updating event:", error);
+      res.status(500).json({ error: "Failed to update event" });
+    }
+  });
+
+  // ============================================================================
+  // GAME SESSIONS ENDPOINTS
+  // ============================================================================
+
+  // Get game sessions for an event
+  app.get("/api/events/:eventId/sessions", async (req, res) => {
+    try {
+      const sessions = await storage.getGameSessionsByEvent(req.params.eventId);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching sessions:", error);
+      res.status(500).json({ error: "Failed to fetch sessions" });
+    }
+  });
+
+  // Submit game score and generate voucher
+  app.post("/api/game-sessions", async (req, res) => {
+    try {
+      const { eventId, zone, score, targetsHit, playerWallet, playerEmail } = req.body;
+
+      // Validate input
+      if (!eventId || !zone || typeof score !== "number" || typeof targetsHit !== "number") {
+        return res.status(400).json({ error: "Invalid game session data" });
+      }
+
+      // Get event
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+
+      // Determine reward tier
+      let rewardTier: "bronze" | "silver" | "gold" | null = null;
+      let tierValue: 0 | 1 | 2 | 3 = 0;
+      
+      if (score >= event.rewards.goldThreshold) {
+        rewardTier = "gold";
+        tierValue = 3;
+      } else if (score >= event.rewards.silverThreshold) {
+        rewardTier = "silver";
+        tierValue = 2;
+      } else if (score >= event.rewards.bronzeThreshold) {
+        rewardTier = "bronze";
+        tierValue = 1;
+      }
+
+      // Create game session
+      const session = await storage.createGameSession({
+        eventId,
+        playerWallet: playerWallet || undefined,
+        playerEmail: playerEmail || undefined,
+        zone,
+        score,
+        targetsHit,
+        rewardTier: rewardTier || undefined,
+        voucherClaimed: false,
+      });
+
+      // Update event stats
+      await storage.updateEvent(eventId, {
+        playerCount: event.playerCount + 1,
+        totalScore: event.totalScore + score,
+      });
+
+      // Generate voucher if player earned a reward
+      let voucher: SignedVoucher | null = null;
+      
+      if (rewardTier) {
+        const wallet = playerWallet || "UNCLAIMED";
+        const nonce = randomBytes(16).toString("hex");
+        const expirationTime = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60); // 30 days
+
+        const voucherData: VoucherData = {
+          v: 1,
+          eventId,
+          sessionId: session.id,
+          wallet,
+          points: score,
+          tier: tierValue,
+          nonce,
+          exp: expirationTime,
+        };
+
+        // Create voucher hash
+        const voucherJson = JSON.stringify(voucherData);
+        const voucherHash = createHash("sha256").update(voucherJson).digest("hex");
+
+        // Sign with Ed25519
+        const messageHash = Buffer.from(voucherHash, "hex");
+        const signature = await ed25519.sign(messageHash, VOUCHER_PRIVATE_KEY);
+        const signatureHex = Buffer.from(signature).toString("hex");
+
+        voucher = {
+          voucherData,
+          signature: signatureHex,
+          voucherHash,
+        };
+      }
+
+      res.status(201).json({
+        session,
+        points: score,
+        tier: rewardTier,
+        voucher,
+      });
+    } catch (error) {
+      console.error("Error creating game session:", error);
+      res.status(500).json({ error: "Failed to create game session" });
+    }
+  });
+
+  // ============================================================================
+  // VOUCHER VERIFICATION ENDPOINT
+  // ============================================================================
+
+  app.post("/api/vouchers/verify", async (req, res) => {
+    try {
+      const { voucherData, signature, voucherHash } = req.body as SignedVoucher;
+
+      // Recreate hash
+      const voucherJson = JSON.stringify(voucherData);
+      const computedHash = createHash("sha256").update(voucherJson).digest("hex");
+
+      if (computedHash !== voucherHash) {
+        return res.status(400).json({ valid: false, error: "Hash mismatch" });
+      }
+
+      // Verify signature
+      const messageHash = Buffer.from(voucherHash, "hex");
+      const signatureBytes = Buffer.from(signature, "hex");
+      
+      const isValid = await ed25519.verify(signatureBytes, messageHash, VOUCHER_PUBLIC_KEY);
+
+      if (!isValid) {
+        return res.status(400).json({ valid: false, error: "Invalid signature" });
+      }
+
+      // Check expiration
+      const now = Math.floor(Date.now() / 1000);
+      if (voucherData.exp < now) {
+        return res.status(400).json({ valid: false, error: "Voucher expired" });
+      }
+
+      // Verify session exists and hasn't been claimed
+      const session = await storage.getGameSession(voucherData.sessionId);
+      if (!session) {
+        return res.status(404).json({ valid: false, error: "Session not found" });
+      }
+
+      if (session.voucherClaimed) {
+        return res.status(400).json({ valid: false, error: "Voucher already claimed" });
+      }
+
+      res.json({
+        valid: true,
+        voucherData,
+        session,
+      });
+    } catch (error) {
+      console.error("Error verifying voucher:", error);
+      res.status(500).json({ valid: false, error: "Verification failed" });
+    }
+  });
+
+  // ============================================================================
+  // HEALTH CHECK
+  // ============================================================================
+
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
 
   const httpServer = createServer(app);
-
   return httpServer;
 }
