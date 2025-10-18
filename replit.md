@@ -31,18 +31,21 @@ I want iterative development. Ask before making major changes. I prefer detailed
 - **Prop Marketplace**: Browse, filter, and view detailed prop information with real-time availability.
 - **Booking Flow**: Date range selection, automatic fee calculation, Pera Wallet connection enforcement, and Algorand TestNet integration.
 - **Organizer Dashboard**: Event management, booking tracking, QR code generation for AR, and live analytics.
+- **Vendor Dashboard**: Hybrid payment system with flexible payout options (Stripe, bank transfer, or Algorand blockchain). Vendors can track pending earnings, set payment preferences, and claim accumulated earnings in batch transactions to reduce fees. Supports pending balance tracking and payout history.
 - **WebAR Game Experience**: QR code-activated, tap-target AR games with scoring, time-based challenges, and a real-time HUD.
 - **Reward System**: Tier-based rewards (Bronze, Silver, Gold) secured by Ed25519-signed cryptographic vouchers, with **real on-chain ASA reward distribution** on Algorand TestNet. Players opt-in to receive reward tokens via Pera Wallet.
-- **Data Models**: Structured for Props, Bookings, Events, and Game Sessions.
-- **API Endpoints**: Comprehensive API for props, bookings, Algorand smart contract interactions, events, game sessions, and voucher verification.
+- **Data Models**: Structured for Props, Bookings, Events, Game Sessions, Vendors, and Payouts.
+- **API Endpoints**: Comprehensive API for props, bookings, Algorand smart contract interactions, events, game sessions, voucher verification, vendor management, and payout processing.
 - **Cryptographic Voucher System**: Vouchers are JSON-serialized, SHA-256 hashed, and signed with Ed25519 private keys for secure verification.
 - **Algorand Smart Contracts**: A stateful PyTeal rental escrow contract manages deposits, rental fees, and confirmations for delivery/return, with methods for deposit, delivery, return, damage reporting, fee release, refund, and timeout.
 - **Algorand Standard Assets (ASAs)**: Three reward tokens created on TestNet - Bronze Medal (SPBRNZ: 747986229), Silver Medal (SPSLVR: 747986230), and Gold Medal (SPGOLD: 747986231). Backend automatically transfers tokens to players after voucher verification and ASA opt-in. **All new events automatically configure these ASA IDs** for all three reward tiers during event creation.
+- **Vendor Payout System**: Hybrid payment approach where rental payments flow to platform wallet initially, vendor earnings accumulate as pending balance. Vendors choose payment method (Stripe/bank/blockchain) and can claim earnings in batch to reduce transaction fees. System tracks pending balance, total earnings, and payout history per vendor.
 
 ### Technical Decisions
 - **PostgreSQL**: Chosen for production readiness, ACID compliance, native UUID support, and Replit/Neon integration.
 - **Ed25519**: Selected for fast signature generation, small signature size, and compatibility with Algorand for secure voucher systems.
 - **WebAR (A-Frame)**: Utilized for no-app-download, instant QR code activation, cross-platform compatibility, and lower barrier to entry.
+- **Hybrid Vendor Payouts**: Platform-controlled payment flow reduces complexity for vendors (no crypto wallet required initially), enables batch payouts to reduce fees, provides flexible payment options (traditional and blockchain), and allows platform to verify rental completion before releasing funds to vendors.
 
 ## External Dependencies
 - **Database**: Neon (PostgreSQL)
@@ -50,4 +53,4 @@ I want iterative development. Ask before making major changes. I prefer detailed
 - **Wallet Integration**: Pera Wallet SDK
 - **UI Libraries**: Shadcn UI, Radix UI
 - **AR Framework**: A-Frame
-- **Payment/Transaction**: Algorand blockchain for escrow and rewards
+- **Payment/Transaction**: Algorand blockchain for escrow and rewards, Stripe for traditional vendor payouts (configured)
