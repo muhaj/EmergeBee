@@ -20,6 +20,7 @@ function Router() {
       <Route path="/prop/:id" component={PropDetail} />
       <Route path="/dashboard" component={OrganizerDashboard} />
       <Route path="/ar/:id" component={ARGame} />
+      <Route path="/ar-game/:id" component={ARGame} />
       <Route component={NotFound} />
     </Switch>
   );

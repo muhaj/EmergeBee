@@ -258,6 +258,8 @@ export default function ARGame() {
       
       const completeData = await completeResponse.json();
       
+      setRewardsClaimed(true);
+      
       toast({
         title: "🎉 Reward Claimed!",
         description: `Medal sent to your wallet! TX: ${completeData.txId?.substring(0, 10)}...`,
@@ -300,11 +302,24 @@ export default function ARGame() {
   };
 
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [tagEasyA, setTagEasyA] = useState(true);
+  const [tagAlgoFoundation, setTagAlgoFoundation] = useState(true);
+  const [rewardsClaimed, setRewardsClaimed] = useState(false);
 
   const getShareText = () => {
     const tier = getRewardTier();
     const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
-    return `I just scored ${score} points${tier ? ` and earned ${tierEmoji} ${tier.toUpperCase()} tier` : ''} playing ${event?.name || 'AR Game'} on Spectacle! Can you beat my score?`;
+    let text = `I just scored ${score} points${tier ? ` and earned ${tierEmoji} ${tier.toUpperCase()} tier` : ''} playing ${event?.name || 'AR Game'} on Spectacle! Can you beat my score?`;
+    
+    // Add tags if selected
+    const tags = [];
+    if (tagEasyA) tags.push('@EasyA_App');
+    if (tagAlgoFoundation) tags.push('@AlgoFoundation');
+    if (tags.length > 0) {
+      text += `\n\n${tags.join(' ')}`;
+    }
+    
+    return text;
   };
 
   const handleShare = () => {
@@ -580,12 +595,14 @@ export default function ARGame() {
                     <Button
                       size="lg"
                       onClick={claimRewards}
-                      disabled={submitScoreMutation.isPending || !voucher || !getRewardTier()}
+                      disabled={submitScoreMutation.isPending || !voucher || !getRewardTier() || rewardsClaimed}
                       className="w-full bg-gradient-to-r from-purple-600 to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       data-testid="button-claim-rewards"
                     >
                       <Trophy className="w-5 h-5 mr-2" />
-                      {submitScoreMutation.isPending 
+                      {rewardsClaimed 
+                        ? 'Rewards Claimed ✓' 
+                        : submitScoreMutation.isPending 
                         ? 'Submitting Score...' 
                         : voucher 
                         ? 'Claim Rewards On-Chain' 
@@ -620,8 +637,34 @@ export default function ARGame() {
                   </Button>
                   
                   {showShareMenu && (
-                    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 space-y-2 border border-white/20">
-                      <p className="text-white/80 text-sm text-center mb-3">Share to:</p>
+                    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 space-y-3 border border-white/20">
+                      <p className="text-white/80 text-sm text-center">Tag your sponsors:</p>
+                      
+                      {/* Tag Checkboxes */}
+                      <div className="flex gap-3 justify-center">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={tagEasyA}
+                            onChange={(e) => setTagEasyA(e.target.checked)}
+                            className="w-4 h-4 rounded border-white/40 bg-white/10 checked:bg-purple-600"
+                            data-testid="checkbox-tag-easya"
+                          />
+                          <span className="text-white/90 text-sm">@EasyA_App</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={tagAlgoFoundation}
+                            onChange={(e) => setTagAlgoFoundation(e.target.checked)}
+                            className="w-4 h-4 rounded border-white/40 bg-white/10 checked:bg-purple-600"
+                            data-testid="checkbox-tag-algo"
+                          />
+                          <span className="text-white/90 text-sm">@AlgoFoundation</span>
+                        </label>
+                      </div>
+                      
+                      <p className="text-white/80 text-sm text-center pt-2">Share to:</p>
                       <div className="grid grid-cols-2 gap-2">
                         <Button
                           variant="outline"
