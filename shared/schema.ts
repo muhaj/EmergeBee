@@ -17,6 +17,7 @@ export const props = pgTable("props", {
   dimensions: jsonb("dimensions").$type<{ height: number; width: number; depth: number; weight: number }>(),
   photos: jsonb("photos").$type<{ url: string; isPrimary: boolean }[]>().notNull(),
   status: text("status").notNull().default('active'), // 'active', 'rented', 'maintenance'
+  userId: text("user_id"), // Clerk user ID of the vendor
   vendorId: text("vendor_id"),
   vendorName: text("vendor_name").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -35,6 +36,7 @@ export const bookings = pgTable("bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   propId: text("prop_id").notNull(),
   eventId: text("event_id"),
+  userId: text("user_id"), // Clerk user ID of the organizer
   organizerWallet: text("organizer_wallet").notNull(),
   vendorWallet: text("vendor_wallet"), // Vendor's Algorand address
   startDate: text("start_date").notNull(), // ISO date string
@@ -75,6 +77,7 @@ export const events = pgTable("events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description").notNull(),
+  userId: text("user_id"), // Clerk user ID of the organizer
   organizerWallet: text("organizer_wallet").notNull(),
   organizerName: text("organizer_name").notNull(),
   date: text("date").notNull(), // ISO date string
@@ -111,6 +114,7 @@ export type Event = typeof events.$inferSelect;
 export const gameSessions = pgTable("game_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   eventId: text("event_id").notNull(),
+  userId: text("user_id"), // Clerk user ID of the player
   playerWallet: text("player_wallet"),
   playerEmail: text("player_email"),
   zone: text("zone").notNull(),
@@ -150,6 +154,7 @@ export interface SignedVoucher {
 // Vendors (prop owners with payment preferences)
 export const vendors = pgTable("vendors", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").unique(), // Clerk user ID
   walletAddress: text("wallet_address").notNull().unique(), // Their Algorand wallet or identifier
   name: text("name").notNull(),
   email: text("email"),
