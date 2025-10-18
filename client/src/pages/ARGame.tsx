@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, Share2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useWallet } from "@/lib/WalletContext";
 import type { Event, SignedVoucher } from "@shared/schema";
 
 export default function ARGame() {
   const params = useParams();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { accountAddress, isConnected, connectWallet } = useWallet();
   
   const eventId = params.id;
   const urlParams = new URLSearchParams(window.location.search);
@@ -23,7 +25,6 @@ export default function ARGame() {
   const [timeLeft, setTimeLeft] = useState(30);
   const [targetsHit, setTargetsHit] = useState(0);
   const [voucher, setVoucher] = useState<SignedVoucher | null>(null);
-  const [walletAddress, setWalletAddress] = useState<string>("");
 
   const sceneRef = useRef<any>(null);
 
@@ -43,9 +44,9 @@ export default function ARGame() {
     }) => {
       return await apiRequest("POST", "/api/game-sessions", data);
     },
-    onSuccess: (data) => {
-      if (data.voucher) {
-        setVoucher(data.voucher);
+    onSuccess: (data: any) => {
+      if (data?.voucher) {
+        setVoucher(data.voucher as SignedVoucher);
       }
       toast({
         title: "Score submitted!",
@@ -112,12 +113,6 @@ export default function ARGame() {
     // Calculate reward tier
     const tier = getRewardTier();
     
-    // Generate temporary wallet if not connected
-    const tempWallet = walletAddress || "SPECTACLE" + Math.random().toString(36).substring(2, 15).toUpperCase();
-    if (!walletAddress) {
-      setWalletAddress(tempWallet);
-    }
-    
     // Submit score to backend with all required fields
     if (eventId) {
       submitScoreMutation.mutate({
@@ -125,24 +120,47 @@ export default function ARGame() {
         zone,
         score,
         targetsHit,
-        playerWallet: tempWallet,
+        playerWallet: accountAddress || undefined,
         rewardTier: tier || undefined,
       });
     }
   };
 
-  const connectWallet = () => {
-    // Mock wallet connection
-    const mockAddress = "SPECTACLE" + Math.random().toString(36).substring(2, 15).toUpperCase();
-    setWalletAddress(mockAddress);
-    
-    toast({
-      title: "Wallet connected!",
-      description: "You can now claim your rewards on-chain.",
-    });
+  const handleConnectWallet = async () => {
+    try {
+      await connectWallet();
+      toast({
+        title: "Wallet connected!",
+        description: "You can now claim your rewards on-chain.",
+      });
+    } catch (error) {
+      toast({
+        title: "Connection failed",
+        description: "Please make sure Pera Wallet is installed and try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const claimRewards = () => {
+    if (!accountAddress) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!voucher) {
+      toast({
+        title: "No voucher available",
+        description: "You need to earn a reward tier first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Rewards claimed!",
       description: "Check your wallet for new tokens and NFTs.",
@@ -341,35 +359,41 @@ export default function ARGame() {
                 )}
 
                 {/* Wallet Connection */}
-                {!walletAddress ? (
+                {!isConnected ? (
                   <Button
                     size="lg"
-                    onClick={connectWallet}
+                    onClick={handleConnectWallet}
                     className="w-full bg-white text-purple-600 hover:bg-white/90"
                     data-testid="button-connect-claim-wallet"
                   >
                     <Wallet className="w-5 h-5 mr-2" />
-                    Connect Wallet to Claim
+                    Connect Pera Wallet to Claim
                   </Button>
                 ) : (
                   <div className="space-y-3">
                     <div className="bg-white/10 rounded-lg p-4 text-center">
                       <p className="text-white/60 text-xs mb-1">Connected Wallet</p>
                       <p className="text-white font-mono text-sm" data-testid="text-connected-wallet">
-                        {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
+                        {accountAddress ? `${accountAddress.slice(0, 8)}...${accountAddress.slice(-6)}` : 'Not connected'}
                       </p>
                     </div>
                     
                     <Button
                       size="lg"
                       onClick={claimRewards}
-                      disabled={!voucher}
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+                      disabled={!voucher || !getRewardTier()}
+                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       data-testid="button-claim-rewards"
                     >
                       <Trophy className="w-5 h-5 mr-2" />
-                      Claim Rewards On-Chain
+                      {voucher ? 'Claim Rewards On-Chain' : 'Submitting Score...'}
                     </Button>
+                    
+                    {!getRewardTier() && (
+                      <p className="text-white/60 text-xs text-center">
+                        You need to earn a reward tier to claim
+                      </p>
+                    )}
                   </div>
                 )}
 
