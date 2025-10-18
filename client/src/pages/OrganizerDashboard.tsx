@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
+import { useWallet } from "@/lib/WalletContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Calendar, Users, Trophy, QrCode, Package, ExternalLink, Shield, Trash2 } from "lucide-react";
+import { Plus, Calendar, Users, Trophy, QrCode, Package, ExternalLink, Shield, Trash2, Wallet, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import CreateEventModal from "@/components/CreateEventModal";
@@ -25,10 +27,52 @@ import type { Event, Booking } from "@shared/schema";
 export default function OrganizerDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isSignedIn } = useAuth();
+  const { isConnected, connectWallet } = useWallet();
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showQRGenerator, setShowQRGenerator] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+
+  // Require either Clerk sign-in OR wallet connection
+  if (!isSignedIn && !isConnected) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">Organizer Dashboard</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-center text-muted-foreground">
+              To access the organizer dashboard, please sign in with your account or connect your wallet.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={connectWallet}
+                variant="outline"
+                size="lg"
+                className="w-full"
+                data-testid="button-connect-wallet-prompt"
+              >
+                <Wallet className="w-5 h-5 mr-2" />
+                Connect Pera Wallet
+              </Button>
+              <div className="text-center text-sm text-muted-foreground">or</div>
+              <Button 
+                onClick={() => window.location.href = '/?signin=true'}
+                size="lg"
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+                data-testid="button-sign-in-prompt"
+              >
+                <User className="w-5 h-5 mr-2" />
+                Sign In with Clerk
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
@@ -87,7 +131,7 @@ export default function OrganizerDashboard() {
               data-testid="button-create-event"
             >
               <Plus className="w-5 h-5 mr-2" />
-              Create Event
+              Create AR Event
             </Button>
           </div>
         </div>

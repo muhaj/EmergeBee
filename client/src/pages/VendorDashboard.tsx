@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
 import { useWallet } from "@/lib/WalletContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet, DollarSign, CreditCard, Building2, TrendingUp, History, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Wallet, DollarSign, CreditCard, Building2, TrendingUp, History, CheckCircle2, Clock, XCircle, User } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Vendor, Payout } from "@shared/schema";
 
 export default function VendorDashboard() {
   const { walletAddress, connectWallet, isConnected } = useWallet();
+  const { isSignedIn } = useAuth();
   const { toast } = useToast();
   const [paymentMethod, setPaymentMethod] = useState<string>("pending");
   const [blockchainWallet, setBlockchainWallet] = useState("");
@@ -149,24 +151,40 @@ export default function VendorDashboard() {
     }
   };
 
-  if (!isConnected) {
+  // Require either Clerk sign-in OR wallet connection
+  if (!isSignedIn && !isConnected) {
     return (
-      <div className="container mx-auto p-6 max-w-4xl">
-        <Card>
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <Card className="max-w-md w-full">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="w-6 h-6" />
-              Vendor Dashboard
-            </CardTitle>
-            <CardDescription>
-              Connect your wallet to access your vendor dashboard
-            </CardDescription>
+            <CardTitle className="text-2xl text-center">Vendor Dashboard</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Button onClick={connectWallet} size="lg" data-testid="button-connect-wallet">
-              <Wallet className="w-4 h-4 mr-2" />
-              Connect Wallet
-            </Button>
+          <CardContent className="space-y-4">
+            <p className="text-center text-muted-foreground">
+              To access the vendor dashboard, please sign in with your account or connect your wallet.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={connectWallet}
+                variant="outline"
+                size="lg"
+                className="w-full"
+                data-testid="button-connect-wallet-prompt"
+              >
+                <Wallet className="w-5 h-5 mr-2" />
+                Connect Pera Wallet
+              </Button>
+              <div className="text-center text-sm text-muted-foreground">or</div>
+              <Button 
+                onClick={() => window.location.href = '/?signin=true'}
+                size="lg"
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+                data-testid="button-sign-in-prompt"
+              >
+                <User className="w-5 h-5 mr-2" />
+                Sign In with Clerk
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
