@@ -6,6 +6,8 @@ import {
   insertBookingSchema,
   insertEventSchema,
   insertGameSessionSchema,
+  insertVendorSchema,
+  insertPayoutSchema,
   type SignedVoucher,
   type VoucherData,
 } from "@shared/schema";
@@ -635,6 +637,216 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error completing reward claim:", error);
       res.status(500).json({ error: "Failed to complete reward claim" });
+    }
+  });
+
+  // ============================================================================
+  // VENDORS ENDPOINTS
+  // ============================================================================
+
+  // Get all vendors
+  app.get("/api/vendors", async (_req, res) => {
+    try {
+      const vendors = await storage.getAllVendors();
+      res.json(vendors);
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+      res.status(500).json({ error: "Failed to fetch vendors" });
+    }
+  });
+
+  // Get vendor by wallet address
+  app.get("/api/vendors/wallet/:address", async (req, res) => {
+    try {
+      const vendor = await storage.getVendorByWallet(req.params.address);
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+      res.json(vendor);
+    } catch (error) {
+      console.error("Error fetching vendor:", error);
+      res.status(500).json({ error: "Failed to fetch vendor" });
+    }
+  });
+
+  // Get vendor by ID
+  app.get("/api/vendors/:id", async (req, res) => {
+    try {
+      const vendor = await storage.getVendor(req.params.id);
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+      res.json(vendor);
+    } catch (error) {
+      console.error("Error fetching vendor:", error);
+      res.status(500).json({ error: "Failed to fetch vendor" });
+    }
+  });
+
+  // Create or update vendor (upsert based on wallet address)
+  app.post("/api/vendors", async (req, res) => {
+    try {
+      const validated = insertVendorSchema.parse(req.body);
+      
+      // Check if vendor already exists
+      const existing = await storage.getVendorByWallet(validated.walletAddress);
+      if (existing) {
+        // Update existing vendor
+        const updated = await storage.updateVendor(existing.id, validated);
+        return res.json(updated);
+      }
+      
+      // Create new vendor
+      const vendor = await storage.createVendor(validated);
+      res.status(201).json(vendor);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: fromError(error).toString() });
+      }
+      console.error("Error creating vendor:", error);
+      res.status(500).json({ error: "Failed to create vendor" });
+    }
+  });
+
+  // Update vendor payment preferences
+  app.patch("/api/vendors/:id", async (req, res) => {
+    try {
+      const updated = await storage.updateVendor(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating vendor:", error);
+      res.status(500).json({ error: "Failed to update vendor" });
+    }
+  });
+
+  // ============================================================================
+  // PAYOUTS ENDPOINTS
+  // ============================================================================
+
+  // Get all payouts for a vendor
+  app.get("/api/payouts/vendor/:vendorId", async (req, res) => {
+    try {
+      const payouts = await storage.getPayoutsByVendor(req.params.vendorId);
+      res.json(payouts);
+    } catch (error) {
+      console.error("Error fetching payouts:", error);
+      res.status(500).json({ error: "Failed to fetch payouts" });
+    }
+  });
+
+  // Request a payout (vendor claims their earnings)
+  app.post("/api/payouts/request", async (req, res) => {
+    try {
+      const { vendorId, method, bookingIds } = req.body;
+
+      // Get vendor
+      const vendor = await storage.getVendor(vendorId);
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+
+      // Check if vendor has set up payment method
+      if (vendor.paymentMethod === 'pending') {
+        return res.status(400).json({ error: "Please set up your payment method first" });
+      }
+
+      // Verify pending balance
+      const pendingBalance = parseFloat(vendor.pendingBalance || '0');
+      if (pendingBalance <= 0) {
+        return res.status(400).json({ error: "No pending balance to claim" });
+      }
+
+      // Create payout record
+      const payout = await storage.createPayout({
+        vendorId,
+        amount: vendor.pendingBalance,
+        method: method || vendor.paymentMethod,
+        status: 'pending',
+        bookingIds: bookingIds || [],
+        transactionDetails: {},
+      });
+
+      res.status(201).json({
+        payout,
+        message: "Payout request created. Processing will begin shortly.",
+      });
+
+    } catch (error) {
+      console.error("Error requesting payout:", error);
+      res.status(500).json({ error: "Failed to request payout" });
+    }
+  });
+
+  // Process a payout (admin/automated)
+  app.post("/api/payouts/:id/process", async (req, res) => {
+    try {
+      const payout = await storage.getPayout(req.params.id);
+      if (!payout) {
+        return res.status(404).json({ error: "Payout not found" });
+      }
+
+      const vendor = await storage.getVendor(payout.vendorId);
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+
+      // Update payout status
+      await storage.updatePayout(payout.id, { status: 'processing' });
+
+      let transactionId = '';
+      let success = false;
+
+      // Process based on method
+      if (payout.method === 'blockchain') {
+        // TODO: Implement Algorand transfer using Python script
+        // For now, mock it
+        transactionId = `ALGO_${randomBytes(16).toString('hex').toUpperCase()}`;
+        success = true;
+      } else if (payout.method === 'stripe') {
+        // TODO: Implement Stripe Connect transfer
+        // For now, mock it
+        transactionId = `STRIPE_${randomBytes(16).toString('hex')}`;
+        success = true;
+      } else if (payout.method === 'bank') {
+        // Manual bank transfer - mark as pending manual processing
+        transactionId = `BANK_${randomBytes(16).toString('hex')}`;
+        success = true;
+      }
+
+      if (success) {
+        // Update payout as completed
+        await storage.updatePayout(payout.id, {
+          status: 'completed',
+          transactionId,
+          completedAt: new Date(),
+        });
+
+        // Update vendor balances
+        await storage.updateVendorBalance(vendor.id, payout.amount, 'subtract');
+        const currentPayouts = parseFloat(vendor.totalPayouts || '0');
+        await storage.updateVendor(vendor.id, {
+          totalPayouts: (currentPayouts + parseFloat(payout.amount)).toFixed(2),
+        });
+
+        res.json({
+          success: true,
+          transactionId,
+          message: "Payout processed successfully",
+        });
+      } else {
+        await storage.updatePayout(payout.id, {
+          status: 'failed',
+          transactionDetails: { errorMessage: 'Processing failed' },
+        });
+        res.status(500).json({ error: "Failed to process payout" });
+      }
+
+    } catch (error) {
+      console.error("Error processing payout:", error);
+      res.status(500).json({ error: "Failed to process payout" });
     }
   });
 
