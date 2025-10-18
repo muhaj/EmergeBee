@@ -1,0 +1,283 @@
+import {
+  type Prop,
+  type InsertProp,
+  type Booking,
+  type InsertBooking,
+  type Event,
+  type InsertEvent,
+  type GameSession,
+  type InsertGameSession,
+} from "@shared/schema";
+import { randomUUID } from "crypto";
+
+export interface IStorage {
+  // Props
+  getAllProps(): Promise<Prop[]>;
+  getProp(id: string): Promise<Prop | undefined>;
+  createProp(prop: InsertProp): Promise<Prop>;
+  updateProp(id: string, prop: Partial<Prop>): Promise<Prop | undefined>;
+
+  // Bookings
+  getAllBookings(): Promise<Booking[]>;
+  getBooking(id: string): Promise<Booking | undefined>;
+  getBookingsByOrganizer(wallet: string): Promise<Booking[]>;
+  createBooking(booking: InsertBooking): Promise<Booking>;
+  updateBooking(id: string, booking: Partial<Booking>): Promise<Booking | undefined>;
+
+  // Events
+  getAllEvents(): Promise<Event[]>;
+  getEvent(id: string): Promise<Event | undefined>;
+  getEventsByOrganizer(wallet: string): Promise<Event[]>;
+  createEvent(event: InsertEvent): Promise<Event>;
+  updateEvent(id: string, event: Partial<Event>): Promise<Event | undefined>;
+
+  // Game Sessions
+  getAllGameSessions(): Promise<GameSession[]>;
+  getGameSession(id: string): Promise<GameSession | undefined>;
+  getGameSessionsByEvent(eventId: string): Promise<GameSession[]>;
+  createGameSession(session: InsertGameSession): Promise<GameSession>;
+}
+
+export class MemStorage implements IStorage {
+  private props: Map<string, Prop>;
+  private bookings: Map<string, Booking>;
+  private events: Map<string, Event>;
+  private gameSessions: Map<string, GameSession>;
+
+  constructor() {
+    this.props = new Map();
+    this.bookings = new Map();
+    this.events = new Map();
+    this.gameSessions = new Map();
+    
+    // Seed with sample data
+    this.seedData();
+  }
+
+  private seedData() {
+    // Sample Props
+    const sampleProps: InsertProp[] = [
+      {
+        name: "Giant Inflatable Llama",
+        description: "A massive 15-foot tall inflatable llama perfect for festivals and outdoor events. Eye-catching and Instagram-worthy!",
+        category: "inflatable",
+        dailyRate: "250.00",
+        depositAmount: "500.00",
+        location: "Los Angeles, CA",
+        locationLat: "34.0522",
+        locationLng: "-118.2437",
+        photos: [
+          { url: "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=800&h=600&fit=crop", isPrimary: true },
+          { url: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&h=600&fit=crop", isPrimary: false },
+        ],
+        status: "active",
+        vendorName: "Party Props LA",
+      },
+      {
+        name: "Neon LED Sculpture",
+        description: "Modern geometric LED sculpture with customizable colors. Creates an amazing ambiance for night events.",
+        category: "sculpture",
+        dailyRate: "180.00",
+        depositAmount: "350.00",
+        location: "Miami, FL",
+        locationLat: "25.7617",
+        locationLng: "-80.1918",
+        photos: [
+          { url: "https://images.unsplash.com/photo-1551918120-9739cb430c6d?w=800&h=600&fit=crop", isPrimary: true },
+        ],
+        status: "active",
+        vendorName: "Neon Dreams Miami",
+      },
+      {
+        name: "Branded Photo Booth",
+        description: "Professional photo booth with custom branding options. Includes instant prints and digital sharing.",
+        category: "booth",
+        dailyRate: "350.00",
+        depositAmount: "700.00",
+        location: "New York, NY",
+        locationLat: "40.7128",
+        locationLng: "-74.0060",
+        photos: [
+          { url: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=600&fit=crop", isPrimary: true },
+        ],
+        status: "active",
+        vendorName: "NYC Event Rentals",
+      },
+      {
+        name: "Giant Inflatable Unicorn",
+        description: "Magical 12-foot inflatable unicorn. Perfect for kids' events and fantasy-themed parties.",
+        category: "inflatable",
+        dailyRate: "200.00",
+        depositAmount: "400.00",
+        location: "Austin, TX",
+        locationLat: "30.2672",
+        locationLng: "-97.7431",
+        photos: [
+          { url: "https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=800&h=600&fit=crop", isPrimary: true },
+        ],
+        status: "active",
+        vendorName: "Austin Party Supply",
+      },
+      {
+        name: "Vintage Carnival Games",
+        description: "Collection of 5 vintage-style carnival games including ring toss, balloon darts, and more.",
+        category: "giant_props",
+        dailyRate: "450.00",
+        depositAmount: "900.00",
+        location: "Chicago, IL",
+        locationLat: "41.8781",
+        locationLng: "-87.6298",
+        photos: [
+          { url: "https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&h=600&fit=crop", isPrimary: true },
+        ],
+        status: "active",
+        vendorName: "Chicago Carnival Co",
+      },
+      {
+        name: "LED Dance Floor",
+        description: "Interactive LED dance floor with color-changing tiles. Creates an unforgettable party atmosphere.",
+        category: "branded",
+        dailyRate: "800.00",
+        depositAmount: "1600.00",
+        location: "Las Vegas, NV",
+        locationLat: "36.1699",
+        locationLng: "-115.1398",
+        photos: [
+          { url: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=600&fit=crop", isPrimary: true },
+        ],
+        status: "active",
+        vendorName: "Vegas Event Pros",
+      },
+    ];
+
+    sampleProps.forEach(prop => {
+      this.createProp(prop);
+    });
+  }
+
+  // Props
+  async getAllProps(): Promise<Prop[]> {
+    return Array.from(this.props.values());
+  }
+
+  async getProp(id: string): Promise<Prop | undefined> {
+    return this.props.get(id);
+  }
+
+  async createProp(insertProp: InsertProp): Promise<Prop> {
+    const id = randomUUID();
+    const prop: Prop = {
+      ...insertProp,
+      id,
+      createdAt: new Date(),
+    };
+    this.props.set(id, prop);
+    return prop;
+  }
+
+  async updateProp(id: string, updates: Partial<Prop>): Promise<Prop | undefined> {
+    const prop = this.props.get(id);
+    if (!prop) return undefined;
+    const updated = { ...prop, ...updates };
+    this.props.set(id, updated);
+    return updated;
+  }
+
+  // Bookings
+  async getAllBookings(): Promise<Booking[]> {
+    return Array.from(this.bookings.values());
+  }
+
+  async getBooking(id: string): Promise<Booking | undefined> {
+    return this.bookings.get(id);
+  }
+
+  async getBookingsByOrganizer(wallet: string): Promise<Booking[]> {
+    return Array.from(this.bookings.values()).filter(
+      b => b.organizerWallet === wallet
+    );
+  }
+
+  async createBooking(insertBooking: InsertBooking): Promise<Booking> {
+    const id = randomUUID();
+    const booking: Booking = {
+      ...insertBooking,
+      id,
+      createdAt: new Date(),
+    };
+    this.bookings.set(id, booking);
+    return booking;
+  }
+
+  async updateBooking(id: string, updates: Partial<Booking>): Promise<Booking | undefined> {
+    const booking = this.bookings.get(id);
+    if (!booking) return undefined;
+    const updated = { ...booking, ...updates };
+    this.bookings.set(id, updated);
+    return updated;
+  }
+
+  // Events
+  async getAllEvents(): Promise<Event[]> {
+    return Array.from(this.events.values());
+  }
+
+  async getEvent(id: string): Promise<Event | undefined> {
+    return this.events.get(id);
+  }
+
+  async getEventsByOrganizer(wallet: string): Promise<Event[]> {
+    return Array.from(this.events.values()).filter(
+      e => e.organizerWallet === wallet
+    );
+  }
+
+  async createEvent(insertEvent: InsertEvent): Promise<Event> {
+    const id = randomUUID();
+    const event: Event = {
+      ...insertEvent,
+      id,
+      playerCount: 0,
+      totalScore: 0,
+      createdAt: new Date(),
+    };
+    this.events.set(id, event);
+    return event;
+  }
+
+  async updateEvent(id: string, updates: Partial<Event>): Promise<Event | undefined> {
+    const event = this.events.get(id);
+    if (!event) return undefined;
+    const updated = { ...event, ...updates };
+    this.events.set(id, updated);
+    return updated;
+  }
+
+  // Game Sessions
+  async getAllGameSessions(): Promise<GameSession[]> {
+    return Array.from(this.gameSessions.values());
+  }
+
+  async getGameSession(id: string): Promise<GameSession | undefined> {
+    return this.gameSessions.get(id);
+  }
+
+  async getGameSessionsByEvent(eventId: string): Promise<GameSession[]> {
+    return Array.from(this.gameSessions.values()).filter(
+      s => s.eventId === eventId
+    );
+  }
+
+  async createGameSession(insertSession: InsertGameSession): Promise<GameSession> {
+    const id = randomUUID();
+    const session: GameSession = {
+      ...insertSession,
+      id,
+      playedAt: new Date(),
+    };
+    this.gameSessions.set(id, session);
+    return session;
+  }
+}
+
+export const storage = new MemStorage();
