@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Calendar, Users, Trophy, QrCode, Package } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Calendar, Users, Trophy, QrCode, Package, ExternalLink, Shield } from "lucide-react";
 import CreateEventModal from "@/components/CreateEventModal";
 import QRGenerator from "@/components/QRGenerator";
 import type { Event, Booking } from "@shared/schema";
@@ -232,9 +233,9 @@ export default function OrganizerDashboard() {
                 {bookings.map(booking => (
                   <Card key={booking.id} className="hover-elevate transition-all" data-testid={`card-booking-${booking.id}`}>
                     <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-lg" data-testid={`text-booking-id-${booking.id}`}>
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg mb-1" data-testid={`text-booking-id-${booking.id}`}>
                             Booking #{booking.id.slice(0, 8)}
                           </CardTitle>
                           <p className="text-sm text-muted-foreground">
@@ -246,25 +247,192 @@ export default function OrganizerDashboard() {
                         </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent className="grid sm:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Rental Fee</p>
-                        <p className="text-lg font-bold text-primary" data-testid={`text-booking-fee-${booking.id}`}>
-                          ${booking.rentalFee}
-                        </p>
+                    <CardContent className="space-y-6">
+                      {/* Payment Information */}
+                      <div className="grid sm:grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Rental Fee</p>
+                          <p className="text-lg font-bold text-primary" data-testid={`text-booking-fee-${booking.id}`}>
+                            ${booking.rentalFee}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Deposit</p>
+                          <p className="text-lg font-semibold" data-testid={`text-booking-deposit-${booking.id}`}>
+                            ${booking.depositAmount}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Organizer Wallet</p>
+                          <p className="text-xs font-mono truncate" data-testid={`text-booking-wallet-${booking.id}`}>
+                            {booking.organizerWallet}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Deposit</p>
-                        <p className="text-lg font-semibold" data-testid={`text-booking-deposit-${booking.id}`}>
-                          ${booking.depositAmount}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Escrow TX</p>
-                        <p className="text-xs font-mono" data-testid={`text-booking-tx-${booking.id}`}>
-                          {booking.escrowTxId ? `${booking.escrowTxId.slice(0, 12)}...` : 'Pending'}
-                        </p>
-                      </div>
+
+                      {/* Smart Contract Information */}
+                      {booking.contractAppId && (
+                        <>
+                          <Separator />
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-5 h-5 text-primary" />
+                              <h3 className="font-semibold">Algorand Smart Contract Escrow</h3>
+                            </div>
+                            
+                            <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground mb-1">App ID</p>
+                                <p className="font-mono font-semibold" data-testid={`text-contract-app-id-${booking.id}`}>
+                                  {booking.contractAppId}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground mb-1">Contract Address</p>
+                                <p className="font-mono text-xs break-all" data-testid={`text-contract-address-${booking.id}`}>
+                                  {booking.contractAddress || 'N/A'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Transaction IDs */}
+                            <div className="space-y-3 bg-muted/30 rounded-lg p-4">
+                              <p className="text-sm font-semibold text-muted-foreground">Transaction History</p>
+                              
+                              {booking.deploymentTxId && (
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-muted-foreground">Deployment</p>
+                                    <p className="font-mono text-xs break-all" data-testid={`text-deployment-tx-${booking.id}`}>
+                                      {booking.deploymentTxId}
+                                    </p>
+                                  </div>
+                                  <a
+                                    href={`https://testnet.algoexplorer.io/tx/${booking.deploymentTxId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-shrink-0 text-primary hover:underline"
+                                    data-testid={`link-deployment-explorer-${booking.id}`}
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                </div>
+                              )}
+
+                              {booking.depositTxId && (
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-muted-foreground">Deposit Paid</p>
+                                    <p className="font-mono text-xs break-all" data-testid={`text-deposit-tx-${booking.id}`}>
+                                      {booking.depositTxId}
+                                    </p>
+                                  </div>
+                                  <a
+                                    href={`https://testnet.algoexplorer.io/tx/${booking.depositTxId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-shrink-0 text-primary hover:underline"
+                                    data-testid={`link-deposit-explorer-${booking.id}`}
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                </div>
+                              )}
+
+                              {booking.deliveryTxId && (
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-muted-foreground">Delivery Confirmed</p>
+                                    <p className="font-mono text-xs break-all" data-testid={`text-delivery-tx-${booking.id}`}>
+                                      {booking.deliveryTxId}
+                                    </p>
+                                  </div>
+                                  <a
+                                    href={`https://testnet.algoexplorer.io/tx/${booking.deliveryTxId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-shrink-0 text-primary hover:underline"
+                                    data-testid={`link-delivery-explorer-${booking.id}`}
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                </div>
+                              )}
+
+                              {booking.returnTxId && (
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-muted-foreground">Return Confirmed</p>
+                                    <p className="font-mono text-xs break-all" data-testid={`text-return-tx-${booking.id}`}>
+                                      {booking.returnTxId}
+                                    </p>
+                                  </div>
+                                  <a
+                                    href={`https://testnet.algoexplorer.io/tx/${booking.returnTxId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-shrink-0 text-primary hover:underline"
+                                    data-testid={`link-return-explorer-${booking.id}`}
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                </div>
+                              )}
+
+                              {booking.refundTxId && (
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-muted-foreground">Refund Processed</p>
+                                    <p className="font-mono text-xs break-all" data-testid={`text-refund-tx-${booking.id}`}>
+                                      {booking.refundTxId}
+                                    </p>
+                                  </div>
+                                  <a
+                                    href={`https://testnet.algoexplorer.io/tx/${booking.refundTxId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-shrink-0 text-primary hover:underline"
+                                    data-testid={`link-refund-explorer-${booking.id}`}
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* View on Explorer */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              asChild
+                              data-testid={`button-view-contract-${booking.id}`}
+                            >
+                              <a
+                                href={`https://testnet.algoexplorer.io/application/${booking.contractAppId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                View Contract on TestNet Explorer
+                              </a>
+                            </Button>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Legacy Escrow TX (for old bookings without smart contract) */}
+                      {!booking.contractAppId && booking.escrowTxId && (
+                        <>
+                          <Separator />
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-1">Escrow TX (Legacy)</p>
+                            <p className="text-xs font-mono" data-testid={`text-booking-tx-${booking.id}`}>
+                              {booking.escrowTxId}
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

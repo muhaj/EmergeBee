@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, MapPin, Package, Shield, ArrowLeft, Check } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Calendar, MapPin, Package, Shield, ArrowLeft, Check, ExternalLink, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useWallet } from "@/lib/WalletContext";
@@ -24,23 +25,35 @@ export default function PropDetail() {
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [vendorWallet, setVendorWallet] = useState("");
+  const [deployerMnemonic, setDeployerMnemonic] = useState("");
+  
+  // Contract deployment state
+  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [contractInfo, setContractInfo] = useState<{
+    appId: number;
+    address: string;
+    txId: string;
+    explorerUrl: string;
+  } | null>(null);
 
   const { data: prop, isLoading } = useQuery<Prop>({
     queryKey: ["/api/props", propId],
     enabled: !!propId,
   });
 
+  // Step 1: Create booking
   const bookingMutation = useMutation({
     mutationFn: async (data: InsertBooking) => {
       return await apiRequest("POST", "/api/bookings", data);
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      setBookingId(data.id);
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       toast({
-        title: "Booking successful!",
-        description: "Your prop rental has been confirmed with blockchain escrow.",
+        title: "Booking created!",
+        description: "Now deploying smart contract to Algorand TestNet...",
       });
-      navigate("/dashboard");
     },
     onError: () => {
       toast({
@@ -51,17 +64,49 @@ export default function PropDetail() {
     },
   });
 
+  // Step 2: Deploy smart contract
+  const deployContractMutation = useMutation({
+    mutationFn: async (params: {
+      bookingId: string;
+      deployerMnemonic: string;
+      organizerAddress: string;
+      vendorAddress: string;
+      depositAmountAlgo: number;
+      rentalFeeAlgo: number;
+      leaseStartTimestamp: number;
+      leaseEndTimestamp: number;
+    }) => {
+      return await apiRequest("POST", "/api/algorand/deploy-contract", params);
+    },
+    onSuccess: (data: any) => {
+      setContractInfo({
+        appId: data.appId,
+        address: data.contractAddress,
+        txId: data.txId,
+        explorerUrl: data.explorerUrl,
+      });
+      toast({
+        title: "Smart contract deployed!",
+        description: "Your rental escrow is now active on Algorand TestNet.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Contract deployment failed",
+        description: error.message || "Please check your deployer mnemonic and try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const calculateRentalFee = () => {
     if (!startDate || !endDate || !prop || !prop.dailyRate) return 0;
     
-    // Ensure dates are in ISO format YYYY-MM-DD
     const start = new Date(startDate + 'T00:00:00');
     const end = new Date(endDate + 'T00:00:00');
     
-    // Check if dates are valid
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
     
-    // Calculate days difference
     const diffTime = end.getTime() - start.getTime();
     const days = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     
@@ -71,12 +116,11 @@ export default function PropDetail() {
     return days * dailyRateNum;
   };
 
-  const handleBooking = (e: React.FormEvent) => {
+  const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!prop || !startDate || !endDate) return;
 
-    // Check if wallet is connected
     if (!isConnected || !accountAddress) {
       toast({
         title: "Wallet not connected",
@@ -87,10 +131,26 @@ export default function PropDetail() {
       return;
     }
 
-    // Calculate rental fee
+    if (!vendorWallet) {
+      toast({
+        title: "Vendor wallet required",
+        description: "Please enter the vendor's Algorand wallet address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!deployerMnemonic) {
+      toast({
+        title: "Deployer mnemonic required",
+        description: "Please enter your 25-word Algorand mnemonic to deploy the escrow contract.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const rentalFee = calculateRentalFee();
     
-    // Ensure rental fee is calculated correctly
     if (rentalFee <= 0) {
       toast({
         title: "Invalid dates",
@@ -103,15 +163,31 @@ export default function PropDetail() {
     const booking: InsertBooking = {
       propId: prop.id,
       organizerWallet: accountAddress,
-      startDate: startDate, // Already in YYYY-MM-DD format from date input
-      endDate: endDate,     // Already in YYYY-MM-DD format from date input
+      startDate: startDate,
+      endDate: endDate,
       rentalFee: rentalFee.toFixed(2),
       depositAmount: prop.depositAmount,
       status: "pending",
-      escrowTxId: `MOCK_TX_${Date.now()}`, // Will be replaced with real transaction in next task
     };
 
-    bookingMutation.mutate(booking);
+    const result = await bookingMutation.mutateAsync(booking);
+    
+    // Now deploy the smart contract
+    if (result.id) {
+      const startTimestamp = Math.floor(new Date(startDate + 'T00:00:00').getTime() / 1000);
+      const endTimestamp = Math.floor(new Date(endDate + 'T00:00:00').getTime() / 1000);
+      
+      await deployContractMutation.mutateAsync({
+        bookingId: result.id,
+        deployerMnemonic: deployerMnemonic,
+        organizerAddress: accountAddress,
+        vendorAddress: vendorWallet,
+        depositAmountAlgo: parseFloat(prop.depositAmount),
+        rentalFeeAlgo: rentalFee,
+        leaseStartTimestamp: startTimestamp,
+        leaseEndTimestamp: endTimestamp,
+      });
+    }
   };
 
   if (isLoading) {
@@ -146,6 +222,9 @@ export default function PropDetail() {
   const rentalFee = calculateRentalFee();
   const depositNum = parseFloat(String(prop.depositAmount || '0'));
   const totalCost = rentalFee + (isNaN(depositNum) ? 0 : depositNum);
+
+  const isProcessing = bookingMutation.isPending || deployContractMutation.isPending;
+  const isSuccess = bookingId && contractInfo;
 
   return (
     <div className="min-h-screen bg-background">
@@ -272,130 +351,256 @@ export default function PropDetail() {
               <CardHeader>
                 <CardTitle className="text-2xl">Book This Prop</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Secured by blockchain escrow
+                  Secured by Algorand smart contract escrow
                 </p>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleBooking} className="space-y-6">
-                  {/* Dates */}
-                  <div className="space-y-4">
+                {/* Success State */}
+                {isSuccess && (
+                  <Alert className="mb-6 border-primary/50 bg-primary/5">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <AlertDescription className="ml-2">
+                      <p className="font-semibold text-primary mb-2">Contract Deployed Successfully!</p>
+                      <div className="space-y-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">App ID: </span>
+                          <span className="font-mono font-semibold" data-testid="text-contract-app-id">
+                            {contractInfo.appId}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Contract: </span>
+                          <span className="font-mono text-xs break-all" data-testid="text-contract-address">
+                            {contractInfo.address}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">TX ID: </span>
+                          <span className="font-mono text-xs break-all" data-testid="text-deployment-tx">
+                            {contractInfo.txId}
+                          </span>
+                        </div>
+                        <a
+                          href={contractInfo.explorerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
+                          data-testid="link-explorer"
+                        >
+                          View on TestNet Explorer
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                      <Separator className="my-4" />
+                      <div className="space-y-2">
+                        <Button
+                          onClick={() => navigate("/organizer-dashboard")}
+                          className="w-full"
+                          data-testid="button-view-dashboard"
+                        >
+                          View Dashboard
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setBookingId(null);
+                            setContractInfo(null);
+                            setDeployerMnemonic("");
+                            setVendorWallet("");
+                            setStartDate("");
+                            setEndDate("");
+                          }}
+                          className="w-full"
+                          data-testid="button-new-booking"
+                        >
+                          Make Another Booking
+                        </Button>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Booking Form */}
+                {!isSuccess && (
+                  <form onSubmit={handleBooking} className="space-y-6">
+                    {/* Progress Indicator */}
+                    {isProcessing && (
+                      <Alert className="border-primary/50 bg-primary/5">
+                        <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                        <AlertDescription className="ml-2">
+                          {bookingMutation.isPending && "Creating booking..."}
+                          {deployContractMutation.isPending && "Deploying smart contract to TestNet..."}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Dates */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="startDate">
+                          <Calendar className="w-4 h-4 inline mr-2" />
+                          Start Date
+                        </Label>
+                        <Input
+                          id="startDate"
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          min={new Date().toISOString().split('T')[0]}
+                          required
+                          disabled={isProcessing}
+                          data-testid="input-start-date"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="endDate">End Date</Label>
+                        <Input
+                          id="endDate"
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          min={startDate || new Date().toISOString().split('T')[0]}
+                          required
+                          disabled={isProcessing}
+                          data-testid="input-end-date"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Wallet Address */}
                     <div className="space-y-2">
-                      <Label htmlFor="startDate">
-                        <Calendar className="w-4 h-4 inline mr-2" />
-                        Start Date
+                      <Label htmlFor="wallet">
+                        <Shield className="w-4 h-4 inline mr-2" />
+                        Your Wallet Address (Organizer)
                       </Label>
                       <Input
-                        id="startDate"
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        min={new Date().toISOString().split('T')[0]}
-                        required
-                        data-testid="input-start-date"
+                        id="wallet"
+                        value={accountAddress || "Not connected"}
+                        readOnly
+                        placeholder="Connect Pera Wallet first"
+                        className="font-mono text-sm bg-muted"
+                        data-testid="input-wallet"
                       />
+                      {!isConnected && (
+                        <p className="text-xs text-muted-foreground">
+                          Connect your Pera Wallet using the button in the header
+                        </p>
+                      )}
                     </div>
 
+                    {/* Vendor Wallet */}
                     <div className="space-y-2">
-                      <Label htmlFor="endDate">End Date</Label>
+                      <Label htmlFor="vendorWallet">
+                        Vendor Wallet Address
+                      </Label>
                       <Input
-                        id="endDate"
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        min={startDate || new Date().toISOString().split('T')[0]}
+                        id="vendorWallet"
+                        value={vendorWallet}
+                        onChange={(e) => setVendorWallet(e.target.value)}
+                        placeholder="Vendor's Algorand address"
+                        className="font-mono text-sm"
                         required
-                        data-testid="input-end-date"
+                        disabled={isProcessing}
+                        data-testid="input-vendor-wallet"
                       />
-                    </div>
-                  </div>
-
-                  {/* Wallet Address */}
-                  <div className="space-y-2">
-                    <Label htmlFor="wallet">
-                      <Shield className="w-4 h-4 inline mr-2" />
-                      Your Wallet Address
-                    </Label>
-                    <Input
-                      id="wallet"
-                      value={accountAddress || "Not connected"}
-                      readOnly
-                      placeholder="Connect Pera Wallet first"
-                      className="font-mono text-sm bg-muted"
-                      data-testid="input-wallet"
-                    />
-                    {!isConnected && (
                       <p className="text-xs text-muted-foreground">
-                        Connect your Pera Wallet using the button in the header
+                        Enter the vendor's Algorand wallet address for rental payments
                       </p>
-                    )}
-                  </div>
-
-                  <Separator />
-
-                  {/* Cost Breakdown */}
-                  <div className="space-y-3 bg-muted/50 rounded-lg p-4">
-                    <h3 className="font-semibold mb-3">Cost Breakdown</h3>
-                    
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Rental Fee</span>
-                      <span className="font-medium" data-testid="text-calculated-fee">
-                        ${rentalFee.toFixed(2)}
-                      </span>
                     </div>
-                    
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Security Deposit</span>
-                      <span className="font-medium">
-                        ${parseFloat(prop.depositAmount).toFixed(2)}
-                      </span>
+
+                    {/* Deployer Mnemonic */}
+                    <div className="space-y-2">
+                      <Label htmlFor="deployerMnemonic">
+                        <Shield className="w-4 h-4 inline mr-2" />
+                        Deployer Mnemonic (25 words)
+                      </Label>
+                      <Input
+                        id="deployerMnemonic"
+                        type="password"
+                        value={deployerMnemonic}
+                        onChange={(e) => setDeployerMnemonic(e.target.value)}
+                        placeholder="word1 word2 word3 ..."
+                        className="font-mono text-sm"
+                        required
+                        disabled={isProcessing}
+                        data-testid="input-deployer-mnemonic"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Your 25-word Algorand mnemonic to deploy the escrow contract. Get TestNet ALGO from: https://bank.testnet.algorand.network/
+                      </p>
                     </div>
-                    
+
                     <Separator />
-                    
-                    <div className="flex justify-between">
-                      <span className="font-semibold">Total Due Now</span>
-                      <span className="text-2xl font-bold text-primary" data-testid="text-total-cost">
-                        ${totalCost.toFixed(2)}
-                      </span>
+
+                    {/* Cost Breakdown */}
+                    <div className="space-y-3 bg-muted/50 rounded-lg p-4">
+                      <h3 className="font-semibold mb-3">Cost Breakdown</h3>
+                      
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Rental Fee</span>
+                        <span className="font-medium" data-testid="text-calculated-fee">
+                          ${rentalFee.toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Security Deposit</span>
+                        <span className="font-medium">
+                          ${parseFloat(prop.depositAmount).toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Total Due Now</span>
+                        <span className="text-2xl font-bold text-primary" data-testid="text-total-cost">
+                          ${totalCost.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        *Deposit refunded after prop return via smart contract
+                      </p>
                     </div>
 
-                    <p className="text-xs text-muted-foreground">
-                      *Deposit refunded after prop return
-                    </p>
-                  </div>
-
-                  {/* Escrow Info */}
-                  <Card className="bg-primary/5 border-primary/20">
-                    <CardContent className="pt-4 pb-4">
-                      <div className="flex gap-3">
-                        <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                        <div className="space-y-1 text-sm">
-                          <p className="font-semibold text-primary">Blockchain Escrow Protection</p>
-                          <p className="text-muted-foreground text-xs">
-                            Your deposit is held in a smart contract and automatically refunded if the prop is returned undamaged.
-                          </p>
+                    {/* Escrow Info */}
+                    <Card className="bg-primary/5 border-primary/20">
+                      <CardContent className="pt-4 pb-4">
+                        <div className="flex gap-3">
+                          <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                          <div className="space-y-1 text-sm">
+                            <p className="font-semibold text-primary">Algorand Smart Contract Escrow</p>
+                            <p className="text-muted-foreground text-xs">
+                              Your deposit is held in a trustless smart contract on Algorand TestNet and automatically refunded if the prop is returned undamaged.
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
 
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full text-lg"
-                    disabled={!startDate || !endDate || bookingMutation.isPending}
-                    data-testid="button-confirm-booking"
-                  >
-                    {bookingMutation.isPending ? (
-                      "Processing..."
-                    ) : (
-                      <>
-                        <Check className="w-5 h-5 mr-2" />
-                        Confirm Booking
-                      </>
-                    )}
-                  </Button>
-                </form>
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full text-lg"
+                      disabled={!startDate || !endDate || !vendorWallet || !deployerMnemonic || isProcessing}
+                      data-testid="button-confirm-booking"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          {bookingMutation.isPending ? "Creating Booking..." : "Deploying Contract..."}
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-5 h-5 mr-2" />
+                          Confirm Booking & Deploy Contract
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                )}
               </CardContent>
             </Card>
           </div>
