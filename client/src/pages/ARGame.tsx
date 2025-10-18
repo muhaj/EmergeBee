@@ -33,14 +33,30 @@ export default function ARGame() {
   });
 
   const submitScoreMutation = useMutation({
-    mutationFn: async (data: { eventId: string; zone: string; score: number; targetsHit: number }) => {
+    mutationFn: async (data: { 
+      eventId: string; 
+      zone: string; 
+      score: number; 
+      targetsHit: number;
+      playerWallet?: string;
+      rewardTier?: string;
+    }) => {
       return await apiRequest("POST", "/api/game-sessions", data);
     },
     onSuccess: (data) => {
-      setVoucher(data.voucher);
+      if (data.voucher) {
+        setVoucher(data.voucher);
+      }
       toast({
         title: "Score submitted!",
-        description: `You earned ${data.points} points!`,
+        description: `You earned ${score} points!`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to submit score",
+        description: error.message || "Please try again",
+        variant: "destructive",
       });
     },
   });
@@ -93,13 +109,24 @@ export default function ARGame() {
   const endGame = () => {
     setGameState('finished');
     
-    // Submit score to backend
+    // Calculate reward tier
+    const tier = getRewardTier();
+    
+    // Generate temporary wallet if not connected
+    const tempWallet = walletAddress || "SPECTACLE" + Math.random().toString(36).substring(2, 15).toUpperCase();
+    if (!walletAddress) {
+      setWalletAddress(tempWallet);
+    }
+    
+    // Submit score to backend with all required fields
     if (eventId) {
       submitScoreMutation.mutate({
         eventId,
         zone,
         score,
         targetsHit,
+        playerWallet: tempWallet,
+        rewardTier: tier || undefined,
       });
     }
   };

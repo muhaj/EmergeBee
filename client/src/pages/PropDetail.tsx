@@ -51,13 +51,23 @@ export default function PropDetail() {
   });
 
   const calculateRentalFee = () => {
-    if (!startDate || !endDate || !prop) return 0;
+    if (!startDate || !endDate || !prop || !prop.dailyRate) return 0;
     
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    // Ensure dates are in ISO format YYYY-MM-DD
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
     
-    return days * parseFloat(prop.dailyRate);
+    // Check if dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+    
+    // Calculate days difference
+    const diffTime = end.getTime() - start.getTime();
+    const days = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    
+    const dailyRateNum = parseFloat(String(prop.dailyRate));
+    if (isNaN(dailyRateNum)) return 0;
+    
+    return days * dailyRateNum;
   };
 
   const handleBooking = (e: React.FormEvent) => {
@@ -65,12 +75,25 @@ export default function PropDetail() {
     
     if (!prop || !startDate || !endDate) return;
 
+    // Calculate rental fee
+    const rentalFee = calculateRentalFee();
+    
+    // Ensure rental fee is calculated correctly
+    if (rentalFee <= 0) {
+      toast({
+        title: "Invalid dates",
+        description: "Please select valid start and end dates.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const booking: InsertBooking = {
       propId: prop.id,
       organizerWallet: walletAddress,
-      startDate,
-      endDate,
-      rentalFee: calculateRentalFee().toString(),
+      startDate: startDate, // Already in YYYY-MM-DD format from date input
+      endDate: endDate,     // Already in YYYY-MM-DD format from date input
+      rentalFee: rentalFee.toFixed(2),
       depositAmount: prop.depositAmount,
       status: "pending",
       escrowTxId: `MOCK_TX_${Date.now()}`,
@@ -109,7 +132,8 @@ export default function PropDetail() {
 
   const primaryPhoto = prop.photos.find(p => p.isPrimary) || prop.photos[0];
   const rentalFee = calculateRentalFee();
-  const totalCost = rentalFee + parseFloat(prop.depositAmount);
+  const depositNum = parseFloat(String(prop.depositAmount || '0'));
+  const totalCost = rentalFee + (isNaN(depositNum) ? 0 : depositNum);
 
   return (
     <div className="min-h-screen bg-background">

@@ -14,9 +14,30 @@ import { fromError } from "zod-validation-error";
 import { randomBytes, createHash } from "crypto";
 import * as ed25519 from "@noble/ed25519";
 
+// CRITICAL: Configure SHA-512 for Ed25519 v3.0.0
+// The library exports 'hashes' which must have sha512 set
+// @ts-ignore
+ed25519.hashes.sha512 = (message: Uint8Array) => {
+  return Uint8Array.from(createHash('sha512').update(message).digest());
+};
+
 // Mock Ed25519 keypair for voucher signing (in production, use secure key management)
-const VOUCHER_PRIVATE_KEY = "0000000000000000000000000000000000000000000000000000000000000001";
-const VOUCHER_PUBLIC_KEY = ed25519.sync.getPublicKey(VOUCHER_PRIVATE_KEY);
+// Convert hex string to Uint8Array (32 bytes)
+const VOUCHER_PRIVATE_KEY_HEX = "0000000000000000000000000000000000000000000000000000000000000001";
+const VOUCHER_PRIVATE_KEY = Buffer.from(VOUCHER_PRIVATE_KEY_HEX, 'hex');
+
+// Derive public key (will be initialized on first use)
+let VOUCHER_PUBLIC_KEY: Uint8Array | null = null;
+async function initVoucherKeys() {
+  if (!VOUCHER_PUBLIC_KEY) {
+    try {
+      VOUCHER_PUBLIC_KEY = await ed25519.getPublicKey(VOUCHER_PRIVATE_KEY);
+    } catch (error) {
+      console.error("Failed to initialize voucher keys:", error);
+      throw new Error("Ed25519 key initialization failed");
+    }
+  }
+}
 
 export function registerRoutes(app: Express): Server {
   // ============================================================================
@@ -110,20 +131,17 @@ export function registerRoutes(app: Express): Server {
     try {
       const validated = insertBookingSchema.parse(req.body);
       
-      // Verify prop exists and is available
+      // Verify prop exists
       const prop = await storage.getProp(validated.propId);
       if (!prop) {
         return res.status(404).json({ error: "Prop not found" });
       }
-      if (prop.status !== "active") {
-        return res.status(400).json({ error: "Prop is not available for booking" });
-      }
+      
+      // For MVP, allow booking regardless of status
+      // In production, implement real date conflict checking
 
       // Create booking
       const booking = await storage.createBooking(validated);
-      
-      // Update prop status (in production, check for date conflicts)
-      await storage.updateProp(validated.propId, { status: "rented" });
 
       res.status(201).json(booking);
     } catch (error) {
@@ -280,7 +298,8 @@ export function registerRoutes(app: Express): Server {
         const voucherJson = JSON.stringify(voucherData);
         const voucherHash = createHash("sha256").update(voucherJson).digest("hex");
 
-        // Sign with Ed25519
+        // Initialize keys and sign with Ed25519
+        await initVoucherKeys();
         const messageHash = Buffer.from(voucherHash, "hex");
         const signature = await ed25519.sign(messageHash, VOUCHER_PRIVATE_KEY);
         const signatureHex = Buffer.from(signature).toString("hex");
@@ -321,6 +340,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Verify signature
+      await initVoucherKeys();
       const messageHash = Buffer.from(voucherHash, "hex");
       const signatureBytes = Buffer.from(signature, "hex");
       

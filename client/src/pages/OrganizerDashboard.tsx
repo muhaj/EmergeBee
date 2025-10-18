@@ -26,7 +26,7 @@ export default function OrganizerDashboard() {
     totalEvents: events?.length || 0,
     activeEvents: events?.filter(e => e.status === "active").length || 0,
     totalPlayers: events?.reduce((sum, e) => sum + e.playerCount, 0) || 0,
-    activeBookings: bookings?.filter(b => b.status === "active").length || 0,
+    activeBookings: bookings?.filter(b => b.status === "pending" || b.status === "confirmed" || b.status === "active").length || 0,
   };
 
   return (

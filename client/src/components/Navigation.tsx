@@ -25,15 +25,17 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <Link href="/">
-            <a className="flex items-center gap-2 hover-elevate rounded-lg px-3 py-2 transition-all" data-testid="link-home">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-xl bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
-                Spectacle
-              </span>
-            </a>
+          <Link 
+            href="/" 
+            className="flex items-center gap-2 hover-elevate rounded-lg px-3 py-2 transition-all" 
+            data-testid="link-home"
+          >
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-bold text-xl bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
+              Spectacle
+            </span>
           </Link>
 
           {/* Navigation Links */}
@@ -91,18 +93,17 @@ function NavLink({
   children: React.ReactNode;
 }) {
   return (
-    <Link href={href}>
-      <a 
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-          active 
-            ? "bg-primary text-primary-foreground" 
-            : "hover-elevate text-muted-foreground hover:text-foreground"
-        }`}
-        data-testid={`link-${href.slice(1) || "home"}`}
-      >
-        {icon}
-        <span className="font-medium">{children}</span>
-      </a>
+    <Link 
+      href={href}
+      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+        active 
+          ? "bg-primary text-primary-foreground" 
+          : "hover-elevate text-muted-foreground hover:text-foreground"
+      }`}
+      data-testid={`link-${href.slice(1) || "home"}`}
+    >
+      {icon}
+      <span className="font-medium">{children}</span>
     </Link>
   );
 }
