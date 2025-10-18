@@ -10,6 +10,23 @@ import { apiRequest } from "@/lib/queryClient";
 import { useWallet } from "@/lib/WalletContext";
 import type { Event, SignedVoucher } from "@shared/schema";
 
+// TypeScript declarations for A-Frame elements
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'a-scene': any;
+      'a-entity': any;
+      'a-camera': any;
+      'a-light': any;
+      'a-sphere': any;
+      'a-box': any;
+      'a-cylinder': any;
+      'a-plane': any;
+      'a-sky': any;
+    }
+  }
+}
+
 export default function ARGame() {
   const params = useParams();
   const [, navigate] = useLocation();
@@ -94,13 +111,51 @@ export default function ARGame() {
   };
 
   const initializeARScene = () => {
-    // A-Frame AR scene initialization would go here
-    // For MVP, we'll simulate target spawning
-    const interval = setInterval(() => {
-      if (gameState !== 'playing') {
-        clearInterval(interval);
-      }
-    }, 2000);
+    // A-Frame AR scene initialization with enhanced target click handling
+    setTimeout(() => {
+      const handleTargetClick = (evt: any) => {
+        const target = evt.target;
+        if (!target.getAttribute('data-target')) return;
+        
+        // Increment score
+        setScore(s => s + (event?.rewards.pointsPerTarget || 10));
+        setTargetsHit(h => h + 1);
+
+        // Visual feedback - turn green and shrink
+        target.setAttribute('color', '#00ff00');
+        target.setAttribute('animation__shrink', {
+          property: 'scale',
+          to: '0 0 0',
+          dur: 500,
+          easing: 'easeInQuad'
+        });
+
+        // Respawn after delay
+        setTimeout(() => {
+          target.setAttribute('scale', '1 1 1');
+          const originalColor = target.id === 'target-1' ? '#ff3366' : target.id === 'target-2' ? '#ff6633' : '#ff3399';
+          target.setAttribute('color', originalColor);
+          target.removeAttribute('animation__shrink');
+          
+          // Move to random position
+          const x = (Math.random() - 0.5) * 3;
+          const y = Math.random() * 1 + 1;
+          const z = -(Math.random() * 2 + 2);
+          target.parentEl.setAttribute('position', `${x} ${y} ${z}`);
+        }, 600);
+
+        // Haptic feedback
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      };
+
+      // Add click listeners to all targets
+      const targets = document.querySelectorAll('[data-target]');
+      targets.forEach(target => {
+        target.addEventListener('click', handleTargetClick);
+      });
+    }, 1000);
   };
 
   const handleTargetHit = () => {
@@ -390,25 +445,76 @@ export default function ARGame() {
 
   return (
     <div className="relative h-screen bg-black overflow-hidden">
-      {/* A-Frame Scene (mock for MVP) */}
+      {/* Enhanced A-Frame AR Scene */}
       {gameState === 'playing' && (
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 to-pink-900/30">
-          {/* Simulated AR View */}
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-white text-opacity-60 mb-4">
-                [Camera View Placeholder]
-              </div>
-              <Button
-                size="lg"
-                onClick={handleTargetHit}
-                className="animate-pulse bg-gradient-to-r from-red-500 to-pink-500 text-white"
-                data-testid="button-tap-target"
-              >
-                Tap Target!
-              </Button>
-            </div>
-          </div>
+        <div className="absolute inset-0" ref={sceneRef}>
+          <a-scene
+            embedded
+            arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+            vr-mode-ui="enabled: false"
+            renderer="logarithmicDepthBuffer: true; precision: medium; antialias: true"
+            style={{ width: '100%', height: '100%' }}
+          >
+            {/* Camera */}
+            <a-camera gps-camera rotation-reader />
+
+            {/* Lighting */}
+            <a-light type="ambient" color="#fff" intensity="0.5" />
+            <a-light type="directional" color="#fff" intensity="0.8" position="1 2 1" />
+
+            {/* Target 1 - Animated Sphere with Glow */}
+            <a-entity position="0 1.5 -3">
+              <a-sphere
+                id="target-1"
+                radius="0.3"
+                color="#ff3366"
+                metalness="0.3"
+                roughness="0.4"
+                data-target="true"
+                animation="property: scale; to: 1.2 1.2 1.2; dir: alternate; loop: true; dur: 800; easing: easeInOutSine"
+                animation__float="property: position; from: 0 1.5 -3; to: 0 1.8 -3; dir: alternate; loop: true; dur: 1500; easing: easeInOutQuad"
+                event-set__click="material.color: #00ff00; scale: 0.1 0.1 0.1"
+              />
+              {/* Glow effect */}
+              <a-sphere radius="0.35" color="#ff3366" opacity="0.3" />
+            </a-entity>
+
+            {/* Target 2 - Different position */}
+            <a-entity position="-1.5 1.2 -2.5">
+              <a-sphere
+                id="target-2"
+                radius="0.3"
+                color="#ff6633"
+                metalness="0.3"
+                roughness="0.4"
+                data-target="true"
+                animation="property: scale; to: 1.2 1.2 1.2; dir: alternate; loop: true; dur: 700; easing: easeInOutSine"
+                animation__float="property: position; from: -1.5 1.2 -2.5; to: -1.5 1.6 -2.5; dir: alternate; loop: true; dur: 1600; easing: easeInOutQuad"
+              />
+              <a-sphere radius="0.35" color="#ff6633" opacity="0.3" />
+            </a-entity>
+
+            {/* Target 3 */}
+            <a-entity position="1.5 1.4 -2.8">
+              <a-sphere
+                id="target-3"
+                radius="0.3"
+                color="#ff3399"
+                metalness="0.3"
+                roughness="0.4"
+                data-target="true"
+                animation="property: scale; to: 1.2 1.2 1.2; dir: alternate; loop: true; dur: 900; easing: easeInOutSine"
+                animation__float="property: position; from: 1.5 1.4 -2.8; to: 1.5 1.7 -2.8; dir: alternate; loop: true; dur: 1400; easing: easeInOutQuad"
+              />
+              <a-sphere radius="0.35" color="#ff3399" opacity="0.3" />
+            </a-entity>
+
+            {/* Cursor for raycasting */}
+            <a-entity
+              cursor="fuse: false; rayOrigin: mouse"
+              raycaster="objects: [data-target]; far: 20; interval: 100"
+            />
+          </a-scene>
         </div>
       )}
 
