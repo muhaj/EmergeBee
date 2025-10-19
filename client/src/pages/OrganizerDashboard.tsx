@@ -34,8 +34,42 @@ export default function OrganizerDashboard() {
   const [showQRGenerator, setShowQRGenerator] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
 
+  // Fetch data - enabled only when authenticated
+  const isAuthorized = isAuthenticated || isConnected;
+  
+  const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
+    queryKey: ["/api/events"],
+    enabled: isAuthorized,
+  });
+
+  const { data: bookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
+    queryKey: ["/api/bookings/my-bookings"],
+    enabled: isAuthorized,
+  });
+
+  const deleteEventMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      return await apiRequest("DELETE", `/api/events/${eventId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({
+        title: "Event deleted",
+        description: "The event has been successfully removed.",
+      });
+      setEventToDelete(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete event. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Show sign-in prompt if not authenticated
-  if (!authLoading && !isAuthenticated && !isConnected) {
+  if (!authLoading && !isAuthorized) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <Card className="w-full max-w-md">
@@ -70,35 +104,6 @@ export default function OrganizerDashboard() {
       </div>
     );
   }
-
-  const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
-  });
-
-  const { data: bookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
-    queryKey: ["/api/bookings/my-bookings"],
-  });
-
-  const deleteEventMutation = useMutation({
-    mutationFn: async (eventId: string) => {
-      return await apiRequest("DELETE", `/api/events/${eventId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      toast({
-        title: "Event deleted",
-        description: "The event has been successfully removed.",
-      });
-      setEventToDelete(null);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete event. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
 
   const stats = {
     totalEvents: events?.length || 0,
