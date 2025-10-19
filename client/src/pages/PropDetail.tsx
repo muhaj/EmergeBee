@@ -548,7 +548,7 @@ export default function PropDetail() {
                       type="submit"
                       size="lg"
                       className="w-full text-lg"
-                      disabled={!startDate || !endDate || !vendorWallet || !deployerMnemonic || isProcessing}
+                      disabled={!startDate || !endDate || !isConnected || !prop?.vendorWalletAddress || isProcessing}
                       data-testid="button-confirm-booking"
                     >
                       {isProcessing ? (
