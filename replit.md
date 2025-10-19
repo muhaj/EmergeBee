@@ -65,6 +65,30 @@ I want iterative development. Ask before making major changes. I prefer detailed
 ## Recent Changes
 
 ### October 19, 2025
+- **Vendor Prop Creation System**: Built complete prop listing functionality in VendorDashboard
+  - Added collapsible "List a New Prop" form with all required fields (name, description, category, daily rate, deposit, location, photo)
+  - **Auto-save vendor wallet address**: Connected Pera Wallet address automatically saved to prop listings
+  - Form displays vendor wallet address in read-only field to confirm auto-population
+  - Integrated with existing POST /api/props endpoint
+  - Props created with vendorWalletAddress field for automatic payment routing
+- **Database Schema Update**: Added `vendor_wallet_address TEXT NOT NULL` column to props table
+  - Stores vendor's Algorand wallet address directly on prop records
+  - Enables automatic vendor identification for rental payments
+  - Applied schema change via SQL (ALTER TABLE props ADD COLUMN)
+- **Simplified Booking Flow**: Removed deployer mnemonic requirement from organizer booking
+  - **Removed deployer mnemonic input field** from PropDetail booking form
+  - Vendor wallet now auto-populates from prop.vendorWalletAddress (read-only display)
+  - Backend uses ALGORAND_DEPLOYER_MNEMONIC environment secret for contract deployment
+  - Updated deployContractSchema to remove deployerMnemonic parameter
+  - Booking button disabled condition updated to check: startDate, endDate, wallet connection, and prop vendorWalletAddress
+- **Security Improvement**: Deployer mnemonic moved to backend environment secrets
+  - Frontend no longer handles sensitive mnemonic data
+  - Backend retrieves mnemonic from process.env.ALGORAND_DEPLOYER_MNEMONIC
+  - Returns error if secret not configured
+- **UX Enhancements**: Streamlined booking experience for event organizers
+  - Only need to connect Pera Wallet and select dates
+  - No manual vendor wallet or mnemonic entry required
+  - Clear visual feedback showing vendor wallet is auto-configured
 - **Modern Hero Section**: Transformed Home page hero to modern video-background style layout
   - Text positioned top-left (desktop) / centered (mobile) instead of fully centered
   - Added decorative gradient background with SVG dot pattern overlay
