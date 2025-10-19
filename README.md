@@ -4,7 +4,7 @@
 
 EmergeBee combines a decentralized marketplace for event props with immersive AR experiences, rewarding attendees with on-chain tokens while ensuring secure, automated rental agreements through Algorand smart contracts.
 
-[![EmergeBee Banner]([https://drive.google.com/file/d/1KvM3yFUMOtthQOyBFcwh00WXLBz4ZT0Q/view?usp=sharing](https://drive.google.com/file/d/1KvM3yFUMOtthQOyBFcwh00WXLBz4ZT0Q/view?usp=sharing)
+![EmergeBee Banner](https://drive.google.com/file/d/1KvM3yFUMOtthQOyBFcwh00WXLBz4ZT0Q/view?usp=sharing)
 
 ---
 
