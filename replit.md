@@ -65,6 +65,16 @@ I want iterative development. Ask before making major changes. I prefer detailed
 ## Recent Changes
 
 ### October 19, 2025
+- **Unified Dashboard System**: Complete reorganization of dashboard experience
+  - **Main Dashboard**: New unified entry point at /dashboard with wallet connection modal
+  - **Modal UI**: Shows "Login to Dashboard" modal when wallet not connected, with message "Connect your Pera Wallet to manage your props and your AR events experiences"
+  - **Three Management Options**: After wallet connection, dashboard displays 3 clear option cards:
+    1. **List Props** → navigates to /props-management (vendor prop creation and management)
+    2. **Manage Bookings** → navigates to /bookings-management (view all rental bookings)
+    3. **Create AR Events** → navigates to /events-management (AR event creation and management)
+  - **Separate Management Pages**: Created dedicated pages for each function (PropsManagement.tsx, BookingsManagement.tsx, EventsManagement.tsx)
+  - **Improved Navigation**: "Dashboard" link in header navigates to unified dashboard
+  - **Seamless Flow**: After connecting wallet, users can easily switch between managing props, bookings, and AR events
 - **Vendor Prop Creation System**: Built complete prop listing functionality in VendorDashboard
   - Added collapsible "List a New Prop" form with all required fields (name, description, category, daily rate, deposit, location, photo)
   - **Auto-save vendor wallet address**: Connected Pera Wallet address automatically saved to prop listings
