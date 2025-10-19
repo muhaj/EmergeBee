@@ -26,6 +26,54 @@ export default function Home() {
           url="https://prod.spline.design/TPYB4U7NZzQF3b-p/scene.splinecode"
           className="size-full"
         />
+        
+        {/* Text and CTA Overlay */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="max-w-7xl mx-auto px-6 lg:px-12 h-full flex items-center">
+            <div className="max-w-2xl pointer-events-auto">
+              <h1 
+                className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-6"
+                data-testid="text-hero-title"
+              >
+                Trustless Prop Rentals<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">
+                  Meet AR Rewards
+                </span>
+              </h1>
+              
+              <p 
+                className="text-lg text-white/80 mb-8 max-w-xl"
+                data-testid="text-hero-subtitle"
+              >
+                Rent event props with secured deposits. Run AR mini-games and distribute on-chain rewards to attendees.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button 
+                  asChild 
+                  size="lg" 
+                  className="h-12 rounded-md px-6 text-base bg-teal-600/20 hover:bg-teal-600/30 text-white border border-teal-500/30 backdrop-blur-sm"
+                  data-testid="button-browse-props"
+                >
+                  <Link href="/marketplace">
+                    Browse Props
+                  </Link>
+                </Button>
+                
+                <Button 
+                  asChild 
+                  size="lg" 
+                  className="h-12 rounded-md px-6 text-base bg-purple-600 hover:bg-purple-700 text-white border-0"
+                  data-testid="button-create-event"
+                >
+                  <Link href="/dashboard">
+                    Create AR Event
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* How It Works Section */}
