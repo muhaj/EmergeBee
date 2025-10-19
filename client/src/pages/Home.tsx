@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Package, Sparkles, Shield, QrCode, Trophy, Zap, ChevronRight } from "lucide-react";
 import { InfiniteSlider } from "@/components/ui/infinite-slider";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
+import heroVideo from "@assets/spectacle_1760837118242.mp4";
 
 export default function Home() {
   return (
@@ -67,12 +68,16 @@ export default function Home() {
           
           {/* Background Video Element */}
           <div className="aspect-[2/3] absolute inset-1 overflow-hidden rounded-3xl border border-black/10 sm:aspect-video lg:rounded-[3rem] dark:border-white/5">
-            <div 
-              className="size-full bg-gradient-to-br from-purple-600/20 via-violet-600/20 to-pink-600/20 opacity-50 dark:opacity-35"
-              style={{
-                backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.08"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-              }}
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="size-full object-cover opacity-50 dark:opacity-35"
+              src={heroVideo}
             />
+            {/* Dark overlay for better text readability */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-violet-900/20 to-pink-900/30" />
           </div>
         </div>
       </section>
