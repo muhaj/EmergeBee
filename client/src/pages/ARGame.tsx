@@ -456,9 +456,14 @@ export default function ARGame() {
       {gameState === 'playing' && (
         <div className="absolute inset-0" ref={sceneRef} style={{ touchAction: 'none' }}>
           <style>{`
-            /* Hide AR.js camera video element */
+            /* Hide AR.js camera video element and prevent scrolling */
             video {
               display: none !important;
+              position: absolute !important;
+              width: 0 !important;
+              height: 0 !important;
+              overflow: hidden !important;
+              visibility: hidden !important;
             }
             /* Ensure A-Frame canvas is visible and full screen */
             .a-canvas {
