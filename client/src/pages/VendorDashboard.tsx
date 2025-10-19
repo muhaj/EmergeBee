@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet, DollarSign, CreditCard, Building2, TrendingUp, History, CheckCircle2, Clock, XCircle, User } from "lucide-react";
+import { Wallet, DollarSign, CreditCard, Building2, TrendingUp, History, CheckCircle2, Clock, XCircle, User, Plus, Package } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Vendor, Payout } from "@shared/schema";
+import type { Vendor, Payout, InsertProp } from "@shared/schema";
 
 export default function VendorDashboard() {
   const { walletAddress, connectWallet, isConnected } = useWallet();
@@ -21,6 +22,18 @@ export default function VendorDashboard() {
     accountNumber: "",
     routingNumber: "",
     bankName: "",
+  });
+
+  // Prop creation form state
+  const [showPropForm, setShowPropForm] = useState(false);
+  const [propForm, setPropForm] = useState({
+    name: "",
+    description: "",
+    category: "inflatable" as const,
+    dailyRate: "",
+    depositAmount: "",
+    location: "",
+    photoUrl: "",
   });
 
   // Fetch vendor data
@@ -95,6 +108,38 @@ export default function VendorDashboard() {
     },
   });
 
+  // Create prop mutation
+  const createPropMutation = useMutation({
+    mutationFn: async (data: InsertProp) => {
+      return await apiRequest("POST", "/api/props", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/props"] });
+      toast({
+        title: "Prop Created!",
+        description: "Your prop is now available in the marketplace.",
+      });
+      // Reset form
+      setPropForm({
+        name: "",
+        description: "",
+        category: "inflatable",
+        dailyRate: "",
+        depositAmount: "",
+        location: "",
+        photoUrl: "",
+      });
+      setShowPropForm(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create prop",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSaveSettings = () => {
     if (!walletAddress) return;
 
@@ -133,6 +178,36 @@ export default function VendorDashboard() {
     }
 
     requestPayoutMutation.mutate();
+  };
+
+  const handleCreateProp = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!walletAddress) {
+      toast({
+        title: "Wallet Required",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const propData: InsertProp = {
+      name: propForm.name,
+      description: propForm.description,
+      category: propForm.category,
+      dailyRate: propForm.dailyRate,
+      depositAmount: propForm.depositAmount,
+      location: propForm.location,
+      vendorName: vendor?.name || "Vendor",
+      vendorWalletAddress: walletAddress, // Auto-save connected wallet address
+      photos: propForm.photoUrl
+        ? [{ url: propForm.photoUrl, isPrimary: true }]
+        : [{ url: "https://via.placeholder.com/400", isPrimary: true }],
+      status: "active",
+    };
+
+    createPropMutation.mutate(propData);
   };
 
   const getPayoutStatusIcon = (status: string) => {
@@ -239,6 +314,169 @@ export default function VendorDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Create Prop Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                List a New Prop
+              </CardTitle>
+              <CardDescription>
+                Add your event props to the marketplace
+              </CardDescription>
+            </div>
+            <Button
+              onClick={() => setShowPropForm(!showPropForm)}
+              variant={showPropForm ? "outline" : "default"}
+              data-testid="button-toggle-prop-form"
+            >
+              {showPropForm ? "Cancel" : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Prop
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        {showPropForm && (
+          <CardContent>
+            <form onSubmit={handleCreateProp} className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="prop-name">Prop Name *</Label>
+                  <Input
+                    id="prop-name"
+                    value={propForm.name}
+                    onChange={(e) => setPropForm({ ...propForm, name: e.target.value })}
+                    placeholder="e.g., Giant Inflatable Unicorn"
+                    required
+                    data-testid="input-prop-name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="prop-category">Category *</Label>
+                  <Select
+                    value={propForm.category}
+                    onValueChange={(value) => setPropForm({ ...propForm, category: value as any })}
+                    data-testid="select-prop-category"
+                  >
+                    <SelectTrigger id="prop-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inflatable">Inflatable</SelectItem>
+                      <SelectItem value="sculpture">Sculpture</SelectItem>
+                      <SelectItem value="booth">Booth</SelectItem>
+                      <SelectItem value="branded">Branded</SelectItem>
+                      <SelectItem value="giant_props">Giant Props</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="prop-description">Description *</Label>
+                <Textarea
+                  id="prop-description"
+                  value={propForm.description}
+                  onChange={(e) => setPropForm({ ...propForm, description: e.target.value })}
+                  placeholder="Describe your prop, including dimensions, setup requirements, and features"
+                  rows={3}
+                  required
+                  data-testid="input-prop-description"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="prop-daily-rate">Daily Rate ($) *</Label>
+                  <Input
+                    id="prop-daily-rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={propForm.dailyRate}
+                    onChange={(e) => setPropForm({ ...propForm, dailyRate: e.target.value })}
+                    placeholder="100.00"
+                    required
+                    data-testid="input-prop-daily-rate"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="prop-deposit">Security Deposit ($) *</Label>
+                  <Input
+                    id="prop-deposit"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={propForm.depositAmount}
+                    onChange={(e) => setPropForm({ ...propForm, depositAmount: e.target.value })}
+                    placeholder="200.00"
+                    required
+                    data-testid="input-prop-deposit"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="prop-location">Location *</Label>
+                  <Input
+                    id="prop-location"
+                    value={propForm.location}
+                    onChange={(e) => setPropForm({ ...propForm, location: e.target.value })}
+                    placeholder="San Francisco, CA"
+                    required
+                    data-testid="input-prop-location"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="prop-photo">Photo URL (optional)</Label>
+                <Input
+                  id="prop-photo"
+                  type="url"
+                  value={propForm.photoUrl}
+                  onChange={(e) => setPropForm({ ...propForm, photoUrl: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  data-testid="input-prop-photo"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank for placeholder image
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-muted p-3 space-y-1">
+                <p className="text-sm font-medium">Your Vendor Wallet Address</p>
+                <p className="text-xs font-mono text-muted-foreground break-all" data-testid="text-vendor-wallet-auto">
+                  {walletAddress}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  This will be automatically saved to your prop listing
+                </p>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={createPropMutation.isPending}
+                data-testid="button-submit-prop"
+              >
+                {createPropMutation.isPending ? (
+                  <>Creating Prop...</>
+                ) : (
+                  <>Create Prop Listing</>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        )}
+      </Card>
 
       {/* Payment Settings */}
       <Card>
