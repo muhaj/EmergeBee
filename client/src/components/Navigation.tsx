@@ -9,7 +9,7 @@ export default function Navigation() {
   const { accountAddress, isConnected, connectWallet, disconnectWallet } = useWallet();
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-transparent">
+    <header className="sticky top-0 z-50 w-full bg-black/80 backdrop-blur-md border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
