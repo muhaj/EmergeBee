@@ -1,4 +1,4 @@
-# Spectacle Platform - Design Guidelines
+# EmergeBee Platform - Design Guidelines
 
 ## Design Approach
 

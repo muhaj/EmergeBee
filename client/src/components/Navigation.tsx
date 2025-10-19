@@ -19,10 +19,10 @@ export default function Navigation() {
             data-testid="link-home"
           >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
-              <span className="text-white text-xl font-bold">S</span>
+              <span className="text-white text-xl font-bold">E</span>
             </div>
             <span className="font-bold text-xl text-white">
-              Spectacle
+              EmergeBee
             </span>
           </Link>
 

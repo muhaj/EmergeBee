@@ -1,4 +1,4 @@
-// Main entry point for the Spectacle application
+// Main entry point for the EmergeBee application
 import "./polyfills";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

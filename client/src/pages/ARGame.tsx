@@ -371,7 +371,7 @@ export default function ARGame() {
   const getShareText = () => {
     const tier = getRewardTier();
     const tierEmoji = tier === 'gold' ? '🥇' : tier === 'silver' ? '🥈' : '🥉';
-    let text = `I just scored ${score} points${tier ? ` and earned ${tierEmoji} ${tier.toUpperCase()} tier` : ''} playing ${event?.name || 'AR Game'} on Spectacle! Can you beat my score?`;
+    let text = `I just scored ${score} points${tier ? ` and earned ${tierEmoji} ${tier.toUpperCase()} tier` : ''} playing ${event?.name || 'AR Game'} on EmergeBee! Can you beat my score?`;
     
     // Add tags if selected
     const tags = [];

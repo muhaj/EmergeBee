@@ -89,7 +89,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl sm:text-5xl font-bold mb-4" data-testid="text-how-it-works">
-              How Spectacle Works
+              How EmergeBee Works
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Three simple roles, one powerful platform

@@ -1,5 +1,5 @@
 """
-Rental Escrow Smart Contract for Spectacle Platform
+Rental Escrow Smart Contract for EmergeBee Platform
 Handles security deposit escrow for prop rentals on Algorand
 """
 

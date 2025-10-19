@@ -1,7 +1,7 @@
-# Spectacle - Trustless Event Prop Rentals + AR Rewards
+# EmergeBee - Events Prop Rentals + AR Rewards
 
 ## Overview
-Spectacle is a Web3 platform that enables trustless event prop rentals. It integrates AR gamification and blockchain-secured rewards using Algorand. The platform combines a prop marketplace with WebAR tap-target games and a cryptographic voucher-based reward system, aiming to transition from MVP to a production-ready system with real blockchain integration.
+EmergeBee is a Web3 platform that enables trustless event prop rentals. It integrates AR gamification and blockchain-secured rewards using Algorand. The platform combines a prop marketplace with WebAR tap-target games and a cryptographic voucher-based reward system, aiming to transition from MVP to a production-ready system with real blockchain integration.
 
 ## User Preferences
 I want iterative development. Ask before making major changes. I prefer detailed explanations. Do not make changes to the folder `Z`. Do not make changes to the file `Y`.
@@ -65,6 +65,13 @@ I want iterative development. Ask before making major changes. I prefer detailed
 ## Recent Changes
 
 ### October 19, 2025
+- **Application Rebranding**: Changed application name from "Spectacle" to "EmergeBee"
+  - Updated all branding: navigation logo (E), brand name, page titles, and meta tags
+  - Changed hero title from "Trustless Prop Rentals" to "Events Prop Rentals"
+  - Updated section headings: "How EmergeBee Works"
+  - Updated social sharing text in AR game to reference EmergeBee
+  - Updated smart contract comments and ASA names (EmergeBee Bronze/Silver/Gold Medal)
+  - Updated all documentation files (replit.md, design_guidelines.md)
 - **Unified Dashboard System**: Complete reorganization of dashboard experience
   - **Main Dashboard**: New unified entry point at /dashboard with wallet connection modal
   - **Modal UI**: Shows "Login to Dashboard" modal when wallet not connected, with message "Connect your Pera Wallet to manage your props and your AR events experiences"

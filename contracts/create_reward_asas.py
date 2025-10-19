@@ -1,5 +1,5 @@
 """
-Create Spectacle Reward ASAs (Algorand Standard Assets) on TestNet
+Create EmergeBee Reward ASAs (Algorand Standard Assets) on TestNet
 Creates Bronze, Silver, and Gold reward tokens
 """
 
@@ -40,7 +40,7 @@ def create_reward_asa(
     
     Args:
         creator_mnemonic: 25-word mnemonic of creator account
-        asset_name: Full name of the asset (e.g., "Spectacle Bronze Medal")
+        asset_name: Full name of the asset (e.g., "EmergeBee Bronze Medal")
         unit_name: Short ticker (e.g., "SPBRNZ")
         total_supply: Total number of tokens to create
         decimals: Number of decimal places (0 for NFT-like tokens)
@@ -149,29 +149,29 @@ def create_all_reward_asas(creator_mnemonic):
     reward_tiers = [
         {
             'tier': 'bronze',
-            'asset_name': 'Spectacle Bronze Medal',
+            'asset_name': 'EmergeBee Bronze Medal',
             'unit_name': 'SPBRNZ',
             'total_supply': 1_000_000,  # 1 million bronze medals
-            'url': 'https://spectacle.repl.co/rewards/bronze'
+            'url': 'https://emergebee.repl.co/rewards/bronze'
         },
         {
             'tier': 'silver',
-            'asset_name': 'Spectacle Silver Medal',
+            'asset_name': 'EmergeBee Silver Medal',
             'unit_name': 'SPSLVR',
             'total_supply': 500_000,  # 500k silver medals (rarer)
-            'url': 'https://spectacle.repl.co/rewards/silver'
+            'url': 'https://emergebee.repl.co/rewards/silver'
         },
         {
             'tier': 'gold',
-            'asset_name': 'Spectacle Gold Medal',
+            'asset_name': 'EmergeBee Gold Medal',
             'unit_name': 'SPGOLD',
             'total_supply': 100_000,  # 100k gold medals (rarest)
-            'url': 'https://spectacle.repl.co/rewards/gold'
+            'url': 'https://emergebee.repl.co/rewards/gold'
         }
     ]
     
     print("=" * 60)
-    print("Creating Spectacle Reward ASAs on Algorand TestNet")
+    print("Creating EmergeBee Reward ASAs on Algorand TestNet")
     print("=" * 60)
     
     all_successful = True
