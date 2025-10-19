@@ -76,8 +76,8 @@ export default function Home() {
               className="size-full object-cover opacity-50 dark:opacity-35"
               src={heroVideo}
             />
-            {/* Dark overlay for better text readability */}
-            <div className="absolute inset-0 bg-black/30" />
+            {/* Dark overlay for better text readability - darker on left side where text is */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/20" />
           </div>
         </div>
       </section>
