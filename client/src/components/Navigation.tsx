@@ -1,29 +1,12 @@
-// Navigation component with wallet connection and auth
+// Navigation component with wallet connection
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Package, LayoutDashboard, Home, Wallet, LogIn, LogOut, User } from "lucide-react";
+import { Package, LayoutDashboard, Home, Wallet } from "lucide-react";
 import { useWallet } from "@/lib/WalletContext";
-import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export default function Navigation() {
   const [location] = useLocation();
   const { accountAddress, isConnected, connectWallet, disconnectWallet } = useWallet();
-  const { user, isAuthenticated, isLoading } = useAuth();
-
-  const handleSignIn = () => {
-    window.location.href = "/api/login";
-  };
-
-  const handleSignOut = () => {
-    window.location.href = "/api/logout";
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg">
@@ -56,9 +39,8 @@ export default function Navigation() {
             </NavLink>
           </nav>
 
-          {/* Right side - Wallet + Auth */}
+          {/* Right side - Wallet Connection */}
           <div className="flex items-center gap-3">
-            {/* Wallet Connection */}
             {!isConnected ? (
               <Button 
                 onClick={connectWallet} 
@@ -80,54 +62,6 @@ export default function Navigation() {
                 <Wallet className="w-4 h-4 mr-2" />
                 {accountAddress?.slice(0, 6)}...{accountAddress?.slice(-4)}
               </Button>
-            )}
-
-            {/* Auth - Sign In/Out */}
-            {!isLoading && (
-              <>
-                {!isAuthenticated ? (
-                  <Button 
-                    onClick={handleSignIn}
-                    size="sm"
-                    data-testid="button-signin"
-                  >
-                    <LogIn className="w-4 h-4 mr-2" />
-                    Sign In
-                  </Button>
-                ) : (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="relative h-9 w-9 rounded-full"
-                        data-testid="button-user-menu"
-                      >
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.email || "User"} />
-                          <AvatarFallback>
-                            {user?.firstName?.[0] || user?.email?.[0] || <User className="w-4 h-4" />}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <div className="flex items-center justify-start gap-2 p-2">
-                        <div className="flex flex-col space-y-1">
-                          {user?.firstName && user?.lastName && (
-                            <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground">{user?.email}</p>
-                        </div>
-                      </div>
-                      <DropdownMenuItem onClick={handleSignOut} data-testid="button-signout">
-                        <LogOut className="w-4 h-4 mr-2" />
-                        Sign Out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </>
             )}
           </div>
         </div>
