@@ -21,6 +21,7 @@ function Router() {
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/prop/:id" component={PropDetail} />
       <Route path="/dashboard" component={OrganizerDashboard} />
+      <Route path="/organizer" component={OrganizerDashboard} />
       <Route path="/vendor" component={VendorDashboard} />
       <Route path="/ar/:id" component={ARGame} />
       <Route path="/ar-game/:id" component={ARGame} />
