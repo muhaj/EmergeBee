@@ -106,13 +106,15 @@ I want iterative development. Ask before making major changes. I prefer detailed
   - Only need to connect Pera Wallet and select dates
   - No manual vendor wallet or mnemonic entry required
   - Clear visual feedback showing vendor wallet is auto-configured
-- **Modern Hero Section**: Transformed Home page hero to modern video-background style layout
-  - Text positioned top-left (desktop) / centered (mobile) instead of fully centered
-  - Added decorative gradient background with SVG dot pattern overlay
-  - Updated buttons to rounded-full pill-shaped styling with ChevronRight icon
+- **Hero Section Updates**: Enhanced branding and messaging
+  - Changed main title from "Trustless Prop Rentals" to "Events Prop Rentals"
+  - Added "Secured by Algorand Blockchain" badge with Shield icon at top of hero
+  - Badge styled with teal colors and backdrop blur for modern glass effect
+  - Text positioned top-left (desktop) / centered (mobile) for modern layout
+  - Integrated Spline 3D viewer as immersive background
+  - Updated buttons with clean styling for Browse Props and Create AR Event CTAs
   - Created InfiniteSlider component for animated stats carousel
   - Created ProgressiveBlur component for fade effects on slider edges
-  - Added "Trusted by events worldwide" section with scrolling stats
   - Installed `react-use-measure` dependency for slider animation
 - **AR Game Scrolling Fix**: Completely hidden AR.js video element to prevent page scrolling
   - Added comprehensive CSS rules (display: none, position: absolute, width/height: 0, overflow: hidden, visibility: hidden)
