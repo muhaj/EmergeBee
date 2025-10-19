@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
 import { useWallet } from "@/lib/WalletContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -27,24 +26,20 @@ import type { Event, Booking } from "@shared/schema";
 export default function OrganizerDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { isConnected, connectWallet } = useWallet();
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showQRGenerator, setShowQRGenerator] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
-
-  // Fetch data - enabled only when authenticated
-  const isAuthorized = isAuthenticated || isConnected;
   
   const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
-    enabled: isAuthorized,
+    enabled: isConnected,
   });
 
   const { data: bookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings/my-bookings"],
-    enabled: isAuthorized,
+    enabled: isConnected,
   });
 
   const deleteEventMutation = useMutation({
@@ -68,32 +63,22 @@ export default function OrganizerDashboard() {
     },
   });
 
-  // Show sign-in prompt if not authenticated
-  if (!authLoading && !isAuthorized) {
+  // Show wallet connection prompt if not connected
+  if (!isConnected) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl mb-2">Organizer Dashboard</CardTitle>
             <CardDescription>
-              Sign in to manage your events and AR experiences
+              Connect your Pera Wallet to manage events and AR experiences
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Button 
-              onClick={() => window.location.href = "/api/login"}
-              size="lg"
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-              data-testid="button-sign-in"
-            >
-              Sign In
-            </Button>
-            <div className="text-center text-sm text-muted-foreground">or</div>
+          <CardContent>
             <Button 
               onClick={connectWallet}
-              variant="outline"
               size="lg"
-              className="w-full"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
               data-testid="button-connect-wallet-prompt"
             >
               <Wallet className="w-5 h-5 mr-2" />
