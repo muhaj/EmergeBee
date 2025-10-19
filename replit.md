@@ -29,13 +29,12 @@ I want iterative development. Ask before making major changes. I prefer detailed
 - **SDK**: `py-algorand-sdk` for contract deployment
 
 ### Core Features
-- **Dual Authentication System**: 
-  - **Replit Auth**: User accounts via Google, GitHub, Apple, or email/password (OpenID Connect)
-  - **Pera Wallet**: Blockchain transactions on Algorand TestNet
-  - Users can sign in with either method to access dashboards
+- **Authentication System**: 
+  - **Pera Wallet**: Primary authentication method for dashboard access and blockchain transactions on Algorand TestNet
+  - **Replit Auth Backend**: OpenID Connect infrastructure remains in backend but is not exposed in the UI
 - **Prop Marketplace**: Browse, filter, and view detailed prop information with real-time availability.
 - **Booking Flow**: Date range selection, automatic fee calculation, Pera Wallet connection enforcement, and Algorand TestNet integration.
-- **Organizer Dashboard**: Event management, booking tracking, QR code generation for AR, and live analytics. Requires Replit Auth or Pera Wallet sign-in.
+- **Organizer Dashboard**: Event management, booking tracking, QR code generation for AR, and live analytics. Requires Pera Wallet connection.
 - **Vendor Dashboard**: Hybrid payment system with flexible payout options (Stripe, bank transfer, or Algorand blockchain). Vendors can track pending earnings, set payment preferences, and claim accumulated earnings in batch transactions to reduce fees. Supports pending balance tracking and payout history.
 - **WebAR Game Experience**: QR code-activated, tap-target AR games with scoring, time-based challenges, and a real-time HUD.
 - **Reward System**: Tier-based rewards (Bronze, Silver, Gold) secured by Ed25519-signed cryptographic vouchers, with **real on-chain ASA reward distribution** on Algorand TestNet. Players opt-in to receive reward tokens via Pera Wallet.
@@ -52,7 +51,7 @@ I want iterative development. Ask before making major changes. I prefer detailed
 - **Ed25519**: Selected for fast signature generation, small signature size, and compatibility with Algorand for secure voucher systems.
 - **WebAR (A-Frame)**: Utilized for no-app-download, instant QR code activation, cross-platform compatibility, and lower barrier to entry.
 - **Hybrid Vendor Payouts**: Platform-controlled payment flow reduces complexity for vendors (no crypto wallet required initially), enables batch payouts to reduce fees, provides flexible payment options (traditional and blockchain), and allows platform to verify rental completion before releasing funds to vendors.
-- **Dual Auth Strategy**: Separating user authentication (Replit Auth) from blockchain transactions (Pera Wallet) provides flexibility - users can access dashboards with either method, simplifying onboarding for non-crypto users while maintaining blockchain functionality.
+- **Wallet-Only Authentication**: Using Pera Wallet as the sole authentication method aligns with Web3 principles, ensures all users have blockchain capability, and simplifies the authentication flow. Backend Replit Auth infrastructure remains for potential future use.
 
 ## External Dependencies
 - **Database**: Neon (PostgreSQL)
@@ -63,10 +62,17 @@ I want iterative development. Ask before making major changes. I prefer detailed
 - **AR Framework**: A-Frame
 - **Payment/Transaction**: Algorand blockchain for escrow and rewards, Stripe for traditional vendor payouts (configured)
 
-## Recent Changes (October 18, 2025)
+## Recent Changes
+
+### October 19, 2025
+- **Wallet-Only Authentication UI**: Removed Replit Auth sign-in UI from frontend
+- **Simplified Navigation**: Navigation component now only shows Connect/Disconnect Wallet buttons
+- **Dashboard Access**: OrganizerDashboard and VendorDashboard now require only Pera Wallet connection
+- **Route Aliases**: Added `/organizer-dashboard` and `/vendor-dashboard` routes for better UX
+- **Backend Preserved**: Replit Auth infrastructure remains in backend for potential future use
+
+### October 18, 2025
 - **Removed Clerk Authentication**: Completely removed Clerk SDK and all dependencies
 - **Implemented Replit Auth**: Integrated native Replit authentication with OpenID Connect and passport.js
 - **Database Schema Updates**: Added `users` and `sessions` tables for Replit Auth
-- **Updated Dashboards**: OrganizerDashboard and VendorDashboard now use Replit Auth
 - **Authentication Routes**: `/api/login` (sign in), `/api/logout` (sign out), `/api/auth/user` (current user)
-- **Dual Auth Support**: Users can access dashboards via Replit Auth OR Pera Wallet connection
