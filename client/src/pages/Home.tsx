@@ -20,123 +20,12 @@ declare global {
 export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden">
-      {/* Full Screen Background - Spline 3D Viewer */}
-      <div className="fixed inset-0 -z-10">
+      {/* Hero Section - Spline 3D Viewer */}
+      <section className="relative h-screen">
         <spline-viewer 
           url="https://prod.spline.design/TPYB4U7NZzQF3b-p/scene.splinecode"
           className="size-full"
         />
-      </div>
-
-      {/* Hero Section */}
-      <section className="relative">
-        <div className="py-24 md:pb-32 lg:pb-36 lg:pt-40">
-          <div className="relative z-10 mx-auto flex max-w-7xl flex-col px-6 lg:block lg:px-12">
-            <div className="mx-auto max-w-lg text-center lg:ml-0 lg:max-w-full lg:text-left">
-              <Badge 
-                variant="outline" 
-                className="mb-6 text-white border-white/30 backdrop-blur-sm bg-white/10 text-sm px-4 py-2"
-                data-testid="badge-secured-algorand"
-              >
-                <Shield className="w-4 h-4 mr-2" />
-                Secured by Algorand Blockchain
-              </Badge>
-              
-              <h1 
-                className="mt-8 max-w-2xl text-balance text-5xl md:text-6xl lg:mt-16 xl:text-7xl font-bold tracking-tight text-white"
-                data-testid="text-hero-title"
-              >
-                Trustless Prop Rentals <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-300 to-purple-300">Meet AR Rewards</span>
-              </h1>
-              
-              <p 
-                className="mt-8 max-w-2xl text-balance text-lg text-white/90"
-                data-testid="text-hero-subtitle"
-              >
-                Rent event props with blockchain-secured deposits. Run AR mini-games and distribute on-chain rewards to attendees.
-              </p>
-              
-              <div className="mt-12 flex flex-col items-center justify-center gap-2 sm:flex-row lg:justify-start">
-                <Button 
-                  asChild 
-                  size="lg" 
-                  className="h-12 rounded-full pl-5 pr-3 text-base"
-                  data-testid="button-browse-props"
-                >
-                  <Link href="/marketplace">
-                    <span className="text-nowrap">Browse Props</span>
-                    <ChevronRight className="ml-1" />
-                  </Link>
-                </Button>
-                
-                <Button 
-                  asChild 
-                  size="lg" 
-                  className="h-12 rounded-full px-5 text-base bg-purple-600 hover:bg-purple-700 text-white border-0"
-                  data-testid="button-create-event"
-                >
-                  <Link href="/dashboard">
-                    <span className="text-nowrap">Create AR Event</span>
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Trusted By Section */}
-      <section className="bg-background pb-2">
-        <div className="group relative m-auto max-w-7xl px-6">
-          <div className="flex flex-col items-center md:flex-row">
-            <div className="md:max-w-44 md:border-r md:pr-6">
-              <p className="text-end text-sm text-muted-foreground">Trusted by events worldwide</p>
-            </div>
-            <div className="relative py-6 md:w-[calc(100%-11rem)]">
-              <InfiniteSlider
-                speedOnHover={20}
-                speed={40}
-                gap={112}
-              >
-                <div className="flex items-center" data-testid="stat-props-listed">
-                  <div className="text-center px-4">
-                    <span className="font-bold text-2xl">1000+</span>
-                    <p className="text-sm text-muted-foreground">Props Listed</p>
-                  </div>
-                </div>
-                <div className="flex items-center" data-testid="stat-events-hosted">
-                  <div className="text-center px-4">
-                    <span className="font-bold text-2xl">500+</span>
-                    <p className="text-sm text-muted-foreground">Events Hosted</p>
-                  </div>
-                </div>
-                <div className="flex items-center" data-testid="stat-rewards-distributed">
-                  <div className="text-center px-4">
-                    <span className="font-bold text-2xl">$50K+</span>
-                    <p className="text-sm text-muted-foreground">Rewards Distributed</p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <div className="text-center px-4">
-                    <span className="font-bold text-2xl">TestNet</span>
-                    <p className="text-sm text-muted-foreground">Algorand Blockchain</p>
-                  </div>
-                </div>
-              </InfiniteSlider>
-
-              <ProgressiveBlur
-                className="pointer-events-none absolute left-0 top-0 h-full w-20"
-                direction="left"
-                blurIntensity={1}
-              />
-              <ProgressiveBlur
-                className="pointer-events-none absolute right-0 top-0 h-full w-20"
-                direction="right"
-                blurIntensity={1}
-              />
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* How It Works Section */}
