@@ -17,7 +17,7 @@ export default function Home() {
             <div className="mx-auto max-w-lg text-center lg:ml-0 lg:max-w-full lg:text-left">
               <Badge 
                 variant="outline" 
-                className="mb-6 text-primary border-primary/30 backdrop-blur-sm bg-primary/5 text-sm px-4 py-2"
+                className="mb-6 text-white border-white/30 backdrop-blur-sm bg-white/10 text-sm px-4 py-2"
                 data-testid="badge-secured-algorand"
               >
                 <Shield className="w-4 h-4 mr-2" />
@@ -25,14 +25,14 @@ export default function Home() {
               </Badge>
               
               <h1 
-                className="mt-8 max-w-2xl text-balance text-5xl md:text-6xl lg:mt-16 xl:text-7xl font-bold tracking-tight"
+                className="mt-8 max-w-2xl text-balance text-5xl md:text-6xl lg:mt-16 xl:text-7xl font-bold tracking-tight text-white"
                 data-testid="text-hero-title"
               >
-                Trustless Prop Rentals <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-violet-600 to-pink-600">Meet AR Rewards</span>
+                Trustless Prop Rentals <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-300 to-purple-300">Meet AR Rewards</span>
               </h1>
               
               <p 
-                className="mt-8 max-w-2xl text-balance text-lg text-muted-foreground"
+                className="mt-8 max-w-2xl text-balance text-lg text-white/90"
                 data-testid="text-hero-subtitle"
               >
                 Rent event props with blockchain-secured deposits. Run AR mini-games and distribute on-chain rewards to attendees.
@@ -77,7 +77,7 @@ export default function Home() {
               src={heroVideo}
             />
             {/* Dark overlay for better text readability */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-violet-900/20 to-pink-900/30" />
+            <div className="absolute inset-0 bg-black/30" />
           </div>
         </div>
       </section>
