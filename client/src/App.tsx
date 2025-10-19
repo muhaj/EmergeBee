@@ -9,6 +9,10 @@ import Navigation from "@/components/Navigation";
 import Home from "@/pages/Home";
 import Marketplace from "@/pages/Marketplace";
 import PropDetail from "@/pages/PropDetail";
+import Dashboard from "@/pages/Dashboard";
+import PropsManagement from "@/pages/PropsManagement";
+import BookingsManagement from "@/pages/BookingsManagement";
+import EventsManagement from "@/pages/EventsManagement";
 import OrganizerDashboard from "@/pages/OrganizerDashboard";
 import VendorDashboard from "@/pages/VendorDashboard";
 import ARGame from "@/pages/ARGame";
@@ -20,7 +24,10 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/marketplace" component={Marketplace} />
       <Route path="/prop/:id" component={PropDetail} />
-      <Route path="/dashboard" component={OrganizerDashboard} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/props-management" component={PropsManagement} />
+      <Route path="/bookings-management" component={BookingsManagement} />
+      <Route path="/events-management" component={EventsManagement} />
       <Route path="/organizer" component={OrganizerDashboard} />
       <Route path="/organizer-dashboard" component={OrganizerDashboard} />
       <Route path="/vendor" component={VendorDashboard} />
