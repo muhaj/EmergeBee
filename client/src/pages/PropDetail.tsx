@@ -25,8 +25,6 @@ export default function PropDetail() {
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [vendorWallet, setVendorWallet] = useState("");
-  const [deployerMnemonic, setDeployerMnemonic] = useState("");
   
   // Contract deployment state
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -68,7 +66,6 @@ export default function PropDetail() {
   const deployContractMutation = useMutation({
     mutationFn: async (params: {
       bookingId: string;
-      deployerMnemonic: string;
       organizerAddress: string;
       vendorAddress: string;
       depositAmountAlgo: number;
@@ -131,19 +128,10 @@ export default function PropDetail() {
       return;
     }
 
-    if (!vendorWallet) {
+    if (!prop.vendorWalletAddress) {
       toast({
-        title: "Vendor wallet required",
-        description: "Please enter the vendor's Algorand wallet address.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!deployerMnemonic) {
-      toast({
-        title: "Deployer mnemonic required",
-        description: "Please enter your 25-word Algorand mnemonic to deploy the escrow contract.",
+        title: "Vendor wallet not found",
+        description: "This prop doesn't have a vendor wallet address configured.",
         variant: "destructive",
       });
       return;
@@ -163,6 +151,7 @@ export default function PropDetail() {
     const booking: InsertBooking = {
       propId: prop.id,
       organizerWallet: accountAddress,
+      vendorWallet: prop.vendorWalletAddress,
       startDate: startDate,
       endDate: endDate,
       rentalFee: rentalFee.toFixed(2),
@@ -172,16 +161,15 @@ export default function PropDetail() {
 
     const result = await bookingMutation.mutateAsync(booking);
     
-    // Now deploy the smart contract
+    // Now deploy the smart contract (using backend ALGORAND_DEPLOYER_MNEMONIC secret)
     if (result.id) {
       const startTimestamp = Math.floor(new Date(startDate + 'T00:00:00').getTime() / 1000);
       const endTimestamp = Math.floor(new Date(endDate + 'T00:00:00').getTime() / 1000);
       
       await deployContractMutation.mutateAsync({
         bookingId: result.id,
-        deployerMnemonic: deployerMnemonic,
         organizerAddress: accountAddress,
-        vendorAddress: vendorWallet,
+        vendorAddress: prop.vendorWalletAddress,
         depositAmountAlgo: parseFloat(prop.depositAmount),
         rentalFeeAlgo: rentalFee,
         leaseStartTimestamp: startTimestamp,
@@ -489,45 +477,21 @@ export default function PropDetail() {
                       )}
                     </div>
 
-                    {/* Vendor Wallet */}
+                    {/* Vendor Wallet - Display Only */}
                     <div className="space-y-2">
                       <Label htmlFor="vendorWallet">
                         Vendor Wallet Address
                       </Label>
                       <Input
                         id="vendorWallet"
-                        value={vendorWallet}
-                        onChange={(e) => setVendorWallet(e.target.value)}
-                        placeholder="Vendor's Algorand address"
-                        className="font-mono text-sm"
-                        required
-                        disabled={isProcessing}
+                        value={prop?.vendorWalletAddress || "Not configured"}
+                        readOnly
+                        disabled
+                        className="font-mono text-sm bg-muted"
                         data-testid="input-vendor-wallet"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Enter the vendor's Algorand wallet address for rental payments
-                      </p>
-                    </div>
-
-                    {/* Deployer Mnemonic */}
-                    <div className="space-y-2">
-                      <Label htmlFor="deployerMnemonic">
-                        <Shield className="w-4 h-4 inline mr-2" />
-                        Deployer Mnemonic (25 words)
-                      </Label>
-                      <Input
-                        id="deployerMnemonic"
-                        type="password"
-                        value={deployerMnemonic}
-                        onChange={(e) => setDeployerMnemonic(e.target.value)}
-                        placeholder="word1 word2 word3 ..."
-                        className="font-mono text-sm"
-                        required
-                        disabled={isProcessing}
-                        data-testid="input-deployer-mnemonic"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Your 25-word Algorand mnemonic to deploy the escrow contract. Get TestNet ALGO from: https://bank.testnet.algorand.network/
+                        Vendor's Algorand wallet address (automatically set)
                       </p>
                     </div>
 

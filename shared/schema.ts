@@ -45,6 +45,7 @@ export const props = pgTable("props", {
   userId: text("user_id"), // Clerk user ID of the vendor
   vendorId: text("vendor_id"),
   vendorName: text("vendor_name").notNull(),
+  vendorWalletAddress: text("vendor_wallet_address").notNull(), // Vendor's Algorand wallet address
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
