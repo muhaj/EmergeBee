@@ -29,10 +29,10 @@ export default function Home() {
         
         {/* Text and CTA Overlay */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="max-w-7xl mx-auto px-6 lg:px-12 h-full flex items-center">
-            <div className="max-w-2xl pointer-events-auto">
+          <div className="h-full flex items-center pl-8 md:pl-16 lg:pl-24">
+            <div className="max-w-3xl pointer-events-auto">
               <h1 
-                className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-6"
+                className="text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-white mb-8"
                 data-testid="text-hero-title"
               >
                 Trustless Prop Rentals<br />
@@ -42,7 +42,7 @@ export default function Home() {
               </h1>
               
               <p 
-                className="text-lg text-white/80 mb-8 max-w-xl"
+                className="text-xl md:text-2xl text-white/80 mb-10 max-w-2xl"
                 data-testid="text-hero-subtitle"
               >
                 Rent event props with secured deposits. Run AR mini-games and distribute on-chain rewards to attendees.
@@ -52,7 +52,7 @@ export default function Home() {
                 <Button 
                   asChild 
                   size="lg" 
-                  className="h-12 rounded-md px-6 text-base bg-teal-600/20 hover:bg-teal-600/30 text-white border border-teal-500/30 backdrop-blur-sm"
+                  className="h-14 rounded-md px-8 text-lg bg-teal-600/20 hover:bg-teal-600/30 text-white border border-teal-500/30 backdrop-blur-sm"
                   data-testid="button-browse-props"
                 >
                   <Link href="/marketplace">
@@ -63,7 +63,7 @@ export default function Home() {
                 <Button 
                   asChild 
                   size="lg" 
-                  className="h-12 rounded-md px-6 text-base bg-purple-600 hover:bg-purple-700 text-white border-0"
+                  className="h-14 rounded-md px-8 text-lg bg-purple-600 hover:bg-purple-700 text-white border-0"
                   data-testid="button-create-event"
                 >
                   <Link href="/dashboard">
