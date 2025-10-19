@@ -10,6 +10,20 @@ import heroVideo from "@assets/spectacle_1760837118242.mp4";
 export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden">
+      {/* Full Screen Background Video */}
+      <div className="fixed inset-0 -z-10">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="size-full object-cover opacity-50 dark:opacity-35"
+          src={heroVideo}
+        />
+        {/* Dark overlay for better text readability - darker on left side where text is */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/30" />
+      </div>
+
       {/* Hero Section */}
       <section className="relative">
         <div className="py-24 md:pb-32 lg:pb-36 lg:pt-40">
@@ -54,30 +68,15 @@ export default function Home() {
                 <Button 
                   asChild 
                   size="lg" 
-                  variant="ghost" 
-                  className="h-12 rounded-full px-5 text-base hover:bg-zinc-950/5 dark:hover:bg-white/5"
+                  className="h-12 rounded-full px-5 text-base bg-purple-600 hover:bg-purple-700 text-white border-0"
                   data-testid="button-create-event"
                 >
                   <Link href="/dashboard">
-                    <span className="text-nowrap">Create Event</span>
+                    <span className="text-nowrap">Create AR Event</span>
                   </Link>
                 </Button>
               </div>
             </div>
-          </div>
-          
-          {/* Background Video Element */}
-          <div className="aspect-[2/3] absolute inset-1 overflow-hidden rounded-3xl border border-black/10 sm:aspect-video lg:rounded-[3rem] dark:border-white/5">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="size-full object-cover opacity-50 dark:opacity-35"
-              src={heroVideo}
-            />
-            {/* Dark overlay for better text readability - darker on left side where text is */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/30" />
           </div>
         </div>
       </section>

@@ -9,7 +9,7 @@ export default function Navigation() {
   const { accountAddress, isConnected, connectWallet, disconnectWallet } = useWallet();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg">
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-transparent backdrop-blur-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
@@ -21,7 +21,7 @@ export default function Navigation() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
               <span className="text-white text-xl font-bold">S</span>
             </div>
-            <span className="font-bold text-xl bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
+            <span className="font-bold text-xl text-white">
               Spectacle
             </span>
           </Link>
@@ -46,6 +46,7 @@ export default function Navigation() {
                 onClick={connectWallet} 
                 variant="outline"
                 size="sm"
+                className="text-white border-white/30 hover:bg-white/10"
                 data-testid="button-connect-wallet"
               >
                 <Wallet className="w-4 h-4 mr-2" />
@@ -56,7 +57,7 @@ export default function Navigation() {
                 onClick={disconnectWallet} 
                 variant="outline"
                 size="sm"
-                className="font-mono text-sm"
+                className="font-mono text-sm text-white border-white/30 hover:bg-white/10"
                 data-testid="button-disconnect-wallet"
               >
                 <Wallet className="w-4 h-4 mr-2" />
@@ -86,8 +87,8 @@ function NavLink({
       href={href}
       className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
         active 
-          ? "bg-primary text-primary-foreground" 
-          : "hover-elevate text-muted-foreground hover:text-foreground"
+          ? "bg-white/20 text-white" 
+          : "hover-elevate text-white/70 hover:text-white"
       }`}
       data-testid={`link-${href.slice(1) || "home"}`}
     >
