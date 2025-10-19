@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
 import { useWallet } from "@/lib/WalletContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,6 @@ import type { Vendor, Payout } from "@shared/schema";
 
 export default function VendorDashboard() {
   const { walletAddress, connectWallet, isConnected } = useWallet();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [paymentMethod, setPaymentMethod] = useState<string>("pending");
   const [blockchainWallet, setBlockchainWallet] = useState("");
@@ -151,40 +149,27 @@ export default function VendorDashboard() {
     }
   };
 
-  // Require either Clerk sign-in OR wallet connection
-  if (!isSignedIn && !isConnected) {
+  // Require wallet connection
+  if (!isConnected) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <Card className="max-w-md w-full">
           <CardHeader>
             <CardTitle className="text-2xl text-center">Vendor Dashboard</CardTitle>
+            <CardDescription className="text-center">
+              Connect your Pera Wallet to manage props and earnings
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-center text-muted-foreground">
-              To access the vendor dashboard, please sign in with your account or connect your wallet.
-            </p>
-            <div className="flex flex-col gap-3">
-              <Button 
-                onClick={connectWallet}
-                variant="outline"
-                size="lg"
-                className="w-full"
-                data-testid="button-connect-wallet-prompt"
-              >
-                <Wallet className="w-5 h-5 mr-2" />
-                Connect Pera Wallet
-              </Button>
-              <div className="text-center text-sm text-muted-foreground">or</div>
-              <Button 
-                onClick={() => window.location.href = '/?signin=true'}
-                size="lg"
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
-                data-testid="button-sign-in-prompt"
-              >
-                <User className="w-5 h-5 mr-2" />
-                Sign In with Clerk
-              </Button>
-            </div>
+          <CardContent>
+            <Button 
+              onClick={connectWallet}
+              size="lg"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              data-testid="button-connect-wallet-prompt"
+            >
+              <Wallet className="w-5 h-5 mr-2" />
+              Connect Pera Wallet
+            </Button>
           </CardContent>
         </Card>
       </div>
