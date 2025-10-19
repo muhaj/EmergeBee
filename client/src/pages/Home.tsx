@@ -5,20 +5,26 @@ import { Badge } from "@/components/ui/badge";
 import { Package, Sparkles, Shield, QrCode, Trophy, Zap, ChevronRight } from "lucide-react";
 import { InfiniteSlider } from "@/components/ui/infinite-slider";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
-import heroVideo from "@assets/spectacle_1760837118242.mp4";
+
+// TypeScript declaration for Spline viewer custom element
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'spline-viewer': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        url: string;
+      };
+    }
+  }
+}
 
 export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden">
-      {/* Full Screen Background Video */}
+      {/* Full Screen Background - Spline 3D Viewer */}
       <div className="fixed inset-0 -z-10">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="size-full object-cover opacity-50 dark:opacity-35"
-          src={heroVideo}
+        <spline-viewer 
+          url="https://prod.spline.design/TPYB4U7NZzQF3b-p/scene.splinecode"
+          className="size-full"
         />
         {/* Dark overlay for better text readability - darker on left side where text is */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/30" />
