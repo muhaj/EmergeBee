@@ -13,7 +13,6 @@ import path from "path";
 // Validation schemas
 const deployContractSchema = z.object({
   bookingId: z.string(),
-  deployerMnemonic: z.string(), // 25-word Algorand mnemonic
   organizerAddress: z.string(),
   vendorAddress: z.string(),
   depositAmountAlgo: z.number(),
@@ -89,6 +88,14 @@ export function registerAlgorandRoutes(app: Express) {
     try {
       const validated = deployContractSchema.parse(req.body);
 
+      // Get deployer mnemonic from environment
+      const deployerMnemonic = process.env.ALGORAND_DEPLOYER_MNEMONIC;
+      if (!deployerMnemonic) {
+        return res.status(500).json({ 
+          error: "ALGORAND_DEPLOYER_MNEMONIC not configured. Please set it in environment secrets." 
+        });
+      }
+
       // Convert ALGO to microALGOs (1 ALGO = 1,000,000 microALGOs)
       const depositMicroAlgos = Math.floor(validated.depositAmountAlgo * 1_000_000);
       const rentalFeeMicroAlgos = Math.floor(validated.rentalFeeAlgo * 1_000_000);
@@ -103,7 +110,7 @@ import json
 from contracts.deploy import deploy_rental_escrow
 
 result = deploy_rental_escrow(
-    deployer_mnemonic="${validated.deployerMnemonic}",
+    deployer_mnemonic="${deployerMnemonic}",
     organizer_addr="${validated.organizerAddress}",
     vendor_addr="${validated.vendorAddress}",
     deposit_amount=${depositMicroAlgos},
