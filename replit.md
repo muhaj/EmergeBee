@@ -65,6 +65,17 @@ I want iterative development. Ask before making major changes. I prefer detailed
 ## Recent Changes
 
 ### October 19, 2025
+- **Modern Hero Section**: Transformed Home page hero to modern video-background style layout
+  - Text positioned top-left (desktop) / centered (mobile) instead of fully centered
+  - Added decorative gradient background with SVG dot pattern overlay
+  - Updated buttons to rounded-full pill-shaped styling with ChevronRight icon
+  - Created InfiniteSlider component for animated stats carousel
+  - Created ProgressiveBlur component for fade effects on slider edges
+  - Added "Trusted by events worldwide" section with scrolling stats
+  - Installed `react-use-measure` dependency for slider animation
+- **AR Game Scrolling Fix**: Completely hidden AR.js video element to prevent page scrolling
+  - Added comprehensive CSS rules (display: none, position: absolute, width/height: 0, overflow: hidden, visibility: hidden)
+  - Changed results screen from overflow-y-auto to overflow-hidden
 - **Wallet-Only Authentication UI**: Removed Replit Auth sign-in UI from frontend
 - **Simplified Navigation**: Navigation component now only shows Connect/Disconnect Wallet buttons
 - **Dashboard Access**: OrganizerDashboard and VendorDashboard now require only Pera Wallet connection
