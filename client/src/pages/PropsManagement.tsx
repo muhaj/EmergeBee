@@ -14,7 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { InsertProp } from "@shared/schema";
 
 export default function PropsManagement() {
-  const { walletAddress, isConnected } = useWallet();
+  const { accountAddress, isConnected } = useWallet();
   const { toast } = useToast();
   const [showPropForm, setShowPropForm] = useState(false);
   const [propForm, setPropForm] = useState({
@@ -24,7 +24,7 @@ export default function PropsManagement() {
     dailyRate: "",
     depositAmount: "",
     location: "",
-    photoUrl: "",
+    photoUrls: [""],
   });
 
   const createPropMutation = useMutation({
@@ -44,7 +44,7 @@ export default function PropsManagement() {
         dailyRate: "",
         depositAmount: "",
         location: "",
-        photoUrl: "",
+        photoUrls: [""],
       });
       setShowPropForm(false);
     },
@@ -60,7 +60,7 @@ export default function PropsManagement() {
   const handleCreateProp = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!walletAddress) {
+    if (!accountAddress) {
       toast({
         title: "Wallet Required",
         description: "Please connect your Pera Wallet first",
@@ -68,6 +68,13 @@ export default function PropsManagement() {
       });
       return;
     }
+
+    // Filter out empty photo URLs
+    const validPhotoUrls = propForm.photoUrls.filter(url => url.trim() !== "");
+    const photos = validPhotoUrls.map((url, index) => ({
+      url,
+      isPrimary: index === 0
+    }));
 
     const propData: InsertProp = {
       name: propForm.name,
@@ -77,12 +84,29 @@ export default function PropsManagement() {
       depositAmount: propForm.depositAmount,
       location: propForm.location,
       vendorName: "Vendor",
-      vendorWalletAddress: walletAddress,
-      photos: propForm.photoUrl ? [{ url: propForm.photoUrl, isPrimary: true }] : [],
+      vendorWalletAddress: accountAddress,
+      photos,
       status: "active",
     };
 
     createPropMutation.mutate(propData);
+  };
+
+  const addPhotoUrl = () => {
+    if (propForm.photoUrls.length < 6) {
+      setPropForm({ ...propForm, photoUrls: [...propForm.photoUrls, ""] });
+    }
+  };
+
+  const removePhotoUrl = (index: number) => {
+    const newPhotoUrls = propForm.photoUrls.filter((_, i) => i !== index);
+    setPropForm({ ...propForm, photoUrls: newPhotoUrls.length > 0 ? newPhotoUrls : [""] });
+  };
+
+  const updatePhotoUrl = (index: number, value: string) => {
+    const newPhotoUrls = [...propForm.photoUrls];
+    newPhotoUrls[index] = value;
+    setPropForm({ ...propForm, photoUrls: newPhotoUrls });
   };
 
   if (!isConnected) {
@@ -222,9 +246,9 @@ export default function PropsManagement() {
                       <Label htmlFor="vendor-wallet">Your Wallet Address</Label>
                       <Input
                         id="vendor-wallet"
-                        value={walletAddress || "Not connected"}
+                        value={accountAddress || "Not connected"}
                         disabled
-                        className="bg-muted"
+                        className="bg-muted font-mono text-xs"
                         data-testid="input-vendor-wallet-display"
                       />
                       <p className="text-xs text-muted-foreground">
@@ -246,16 +270,55 @@ export default function PropsManagement() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="photo-url">Photo URL</Label>
-                    <Input
-                      id="photo-url"
-                      type="url"
-                      value={propForm.photoUrl}
-                      onChange={(e) => setPropForm({ ...propForm, photoUrl: e.target.value })}
-                      placeholder="https://example.com/image.jpg"
-                      data-testid="input-photo-url"
-                    />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Photo URLs (up to 6)</Label>
+                      {propForm.photoUrls.length < 6 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addPhotoUrl}
+                          data-testid="button-add-photo"
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Add Photo
+                        </Button>
+                      )}
+                    </div>
+                    {propForm.photoUrls.map((url, index) => (
+                      <div key={index} className="flex gap-2 items-start">
+                        <div className="flex-1 space-y-1">
+                          <Input
+                            type="url"
+                            value={url}
+                            onChange={(e) => updatePhotoUrl(index, e.target.value)}
+                            placeholder={`Photo URL ${index + 1} (https://example.com/image.jpg)`}
+                            data-testid={`input-photo-url-${index}`}
+                          />
+                          {index === 0 && url && (
+                            <p className="text-xs text-muted-foreground">
+                              Primary photo (shown in marketplace)
+                            </p>
+                          )}
+                        </div>
+                        {propForm.photoUrls.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removePhotoUrl(index)}
+                            data-testid={`button-remove-photo-${index}`}
+                          >
+                            <span className="sr-only">Remove photo</span>
+                            ✕
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <p className="text-xs text-muted-foreground">
+                      Add URLs to your prop photos. First photo will be the primary image.
+                    </p>
                   </div>
 
                   <Button
