@@ -26,8 +26,6 @@ export default function Home() {
           url="https://prod.spline.design/TPYB4U7NZzQF3b-p/scene.splinecode"
           className="size-full"
         />
-        {/* Dark overlay for better text readability - darker on left side where text is */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/30" />
       </div>
 
       {/* Hero Section */}
