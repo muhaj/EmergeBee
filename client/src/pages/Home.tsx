@@ -29,7 +29,7 @@ export default function Home() {
         
         {/* Text and CTA Overlay */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="h-full flex items-center pl-8 md:pl-16 lg:pl-24">
+          <div className="max-w-7xl mx-auto px-6 lg:px-12 h-full flex items-center">
             <div className="max-w-3xl pointer-events-auto">
               <h1 
                 className="text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-white mb-8"
