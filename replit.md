@@ -75,8 +75,15 @@ I want iterative development. Ask before making major changes. I prefer detailed
   - **Separate Management Pages**: Created dedicated pages for each function (PropsManagement.tsx, BookingsManagement.tsx, EventsManagement.tsx)
   - **Improved Navigation**: "Dashboard" link in header navigates to unified dashboard
   - **Seamless Flow**: After connecting wallet, users can easily switch between managing props, bookings, and AR events
-- **Vendor Prop Creation System**: Built complete prop listing functionality in VendorDashboard
-  - Added collapsible "List a New Prop" form with all required fields (name, description, category, daily rate, deposit, location, photo)
+- **Props Management Form Fixes**: Fixed critical bugs and enhanced photo upload functionality
+  - **Fixed wallet address bug**: Changed `walletAddress` to `accountAddress` to properly display connected Pera Wallet address
+  - **Multiple photo support**: Upgraded from single photo URL to array of photo URLs (up to 6 photos)
+  - Added dynamic add/remove photo URL functionality with "Add Photo" button
+  - First photo automatically marked as primary (displayed in marketplace)
+  - Wallet address field displays with monospace font and is read-only
+  - Form successfully submits all photos in photos array with vendorWalletAddress
+- **Vendor Prop Creation System**: Built complete prop listing functionality in PropsManagement page
+  - Added collapsible "List a New Prop" form with all required fields (name, description, category, daily rate, deposit, location, photos)
   - **Auto-save vendor wallet address**: Connected Pera Wallet address automatically saved to prop listings
   - Form displays vendor wallet address in read-only field to confirm auto-population
   - Integrated with existing POST /api/props endpoint
